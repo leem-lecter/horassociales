@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registro de horas sociales ITCA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Idea de diseño: un cuaderno de control. Papel frío, tinta azul de lapicero como único acento
+   (las hojas oficiales se llenan en azul), y cada pantalla rotulada con el código de su formulario. */
+:root{
+  --papel:#f3f5fa; --hoja:#ffffff; --tinta:#141b2d; --gris:#586176; --linea:#d7ddea;
+  --azul:#1e3fc0; --azul-suave:#e7ecff; --sobre-azul:#ffffff;
+  --ok:#1b7447; --ok-suave:#e2f4ea; --aviso:#8f5600; --aviso-suave:#fdf0d8; --mal:#b02a22; --mal-suave:#fde7e5;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --texto:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --papel:#0e1320; --hoja:#161c2c; --tinta:#e7ebf5; --gris:#9aa4bb; --linea:#2a334d;
+    --azul:#93a8ff; --azul-suave:#1d2850; --sobre-azul:#0e1320;
+    --ok:#6fd3a0; --ok-suave:#143524; --aviso:#f0b860; --aviso-suave:#3a2c10; --mal:#ff9d94; --mal-suave:#431b18;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --papel:#0e1320; --hoja:#161c2c; --tinta:#e7ebf5; --gris:#9aa4bb; --linea:#2a334d;
+  --azul:#93a8ff; --azul-suave:#1d2850; --sobre-azul:#0e1320;
+  --ok:#6fd3a0; --ok-suave:#143524; --aviso:#f0b860; --aviso-suave:#3a2c10; --mal:#ff9d94; --mal-suave:#431b18;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--papel);color:var(--tinta);font:400 15px/1.5 var(--texto)}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:26px} h2{font-size:18px} h3{font-size:15px}
+p{margin:0}
+a{color:var(--azul)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+.codigo{font:500 11px var(--mono);letter-spacing:.04em;color:var(--azul);background:var(--azul-suave);padding:2px 7px;border-radius:4px;white-space:nowrap}
+.gris{color:var(--gris)} .num{font-variant-numeric:tabular-nums}
+
+/* Marco */
+.marco{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.marco>*,.dos>*{min-width:0}
+.lateral{background:var(--hoja);border-right:1px solid var(--linea);padding:20px 14px;display:flex;flex-direction:column;gap:18px}
+.marca{display:flex;flex-direction:column;gap:2px;padding:0 8px}
+.marca b{font:700 17px var(--display)} .marca span{font-size:12px;color:var(--gris)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:7px;text-decoration:none;color:var(--tinta);font-weight:500}
+.nav a small{font:500 10.5px var(--mono);color:var(--gris)}
+.nav a:hover{background:var(--papel)}
+.nav a[aria-current="page"]{background:var(--azul-suave);color:var(--azul)}
+.nav a[aria-current="page"] small{color:var(--azul)}
+.quien{margin-top:auto;padding:12px 10px;border-top:1px solid var(--linea);display:flex;flex-direction:column;gap:8px;font-size:13px}
+.principal{padding:28px clamp(16px,4vw,44px) 60px;min-width:0}
+.cabecera{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 14px;margin-bottom:6px}
+.bajada{color:var(--gris);max-width:68ch;margin-bottom:22px}
+.pila{display:flex;flex-direction:column;gap:18px;max-width:1040px}
+
+/* Piezas */
+.hoja{background:var(--hoja);border:1px solid var(--linea);border-radius:10px;padding:20px}
+.hoja>header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:14px}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.ancho{grid-column:1/-1}
+.campo{display:flex;flex-direction:column;gap:5px;min-width:0}
+.campo>span{font-size:13px;font-weight:500}
+.campo small{font-size:12px;color:var(--gris)}
+.campo .error{color:var(--mal);font-weight:500}
+input,select,textarea{width:100%;background:var(--hoja);border:1px solid var(--linea);border-radius:7px;padding:8px 10px;min-height:38px}
+textarea{min-height:76px;resize:vertical}
+input:disabled,select:disabled,textarea:disabled{background:var(--papel);color:var(--gris)}
+input[type=checkbox],input[type=radio]{width:auto;min-height:0;accent-color:var(--azul)}
+input.con-error{border-color:var(--mal)}
+.boton{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--azul);background:var(--azul);color:var(--sobre-azul);border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer;text-decoration:none;min-height:38px}
+.boton.suave{background:transparent;color:var(--azul)}
+.boton.plano{border-color:var(--linea);background:transparent;color:var(--tinta);font-weight:500}
+.boton.chico{padding:4px 10px;min-height:30px;font-size:13px}
+.boton:disabled{opacity:.5;cursor:not-allowed}
+.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pastilla{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap;background:var(--papel);color:var(--gris);border:1px solid var(--linea)}
+.pastilla::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pastilla.ok{background:var(--ok-suave);color:var(--ok);border-color:transparent}
+.pastilla.aviso{background:var(--aviso-suave);color:var(--aviso);border-color:transparent}
+.pastilla.mal{background:var(--mal-suave);color:var(--mal);border-color:transparent}
+.nota{border-left:3px solid var(--azul);background:var(--azul-suave);padding:10px 14px;border-radius:0 7px 7px 0;font-size:14px}
+.nota.aviso{border-color:var(--aviso);background:var(--aviso-suave)}
+.nota.mal{border-color:var(--mal);background:var(--mal-suave)}
+.nota.ok{border-color:var(--ok);background:var(--ok-suave)}
+.desliza{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--linea);vertical-align:top}
+th{font-size:12px;font-weight:600;color:var(--gris);white-space:nowrap}
+td.num,th.num{text-align:right}
+tfoot td{font-weight:600;border-bottom:0}
+
+/* Panel */
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.cifra{display:flex;flex-direction:column;gap:2px}
+.cifra b{font:700 30px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.cifra span{font-size:13px;color:var(--gris)}
+.barra{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--papel);border:1px solid var(--linea)}
+.barra i{display:block;height:100%}
+.barra .a{background:var(--azul)}
+.barra .p{background:repeating-linear-gradient(135deg,var(--azul) 0 4px,var(--azul-suave) 4px 8px)}
+.barra .v{background:var(--ok)}
+.leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--gris)}
+.leyenda i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.dos{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:18px;align-items:start}
+.pestanas{display:flex;gap:6px;flex-wrap:wrap}
+.pestanas button{border:1px solid var(--linea);background:transparent;border-radius:99px;padding:5px 12px;cursor:pointer;font-weight:500}
+.pestanas button[aria-pressed="true"]{background:var(--azul);border-color:var(--azul);color:var(--sobre-azul)}
+.horario input{min-width:92px;padding:6px 8px}
+.lista{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:70ch}
+
+/* Ingreso */
+.ingreso{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.ingreso .hoja{width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px}
+.demo{display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--linea);padding-top:14px;font-size:13px}
+
+#aviso-flotante{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--tinta);color:var(--papel);padding:9px 16px;border-radius:8px;font-size:14px;max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s}
+#aviso-flotante.ver{opacity:1}
+@media (prefers-reduced-motion:reduce){#aviso-flotante{transition:none}}
+
+@media (max-width:860px){
+  .marco{grid-template-columns:minmax(0,1fr)}
+  .lateral{border-right:0;border-bottom:1px solid var(--linea);padding:12px 16px;gap:10px}
+  .marca{padding:0}
+  .nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .nav a{flex:0 0 auto;border:1px solid var(--linea)}
+  .quien{margin:0;padding:8px 0 0;flex-direction:row;align-items:center;justify-content:space-between}
+  .principal{padding-top:20px}
+  .dos{grid-template-columns:1fr}
+  h1{font-size:22px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="aviso-flotante" role="status" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+   PROTOTIPO: REGISTRO DE HORAS SOCIALES (SSE) ITCA-FEPADE
+   Un solo archivo, sin dependencias. Tres partes:
+     1. DATOS    -> todo lo que lee o guarda pasa por el objeto `api`.
+                    Al integrar con la aplicación del profesor, solo se
+                    reemplaza esa parte por llamadas a su backend.
+     2. REGLAS   -> validaciones tomadas de las 25 reglas del SSE.
+     3. PANTALLAS-> una función por vista, que devuelve HTML.
+   ===================================================================== */
+
+/* ---------- utilidades ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fecha = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const hoy = () => iso(new Date());
+const masDias = (s, n) => { const d = fecha(s); d.setDate(d.getDate()+n); return iso(d); };
+const masMeses = (s, n) => { const d = fecha(s); d.setMonth(d.getMonth()+n); return iso(d); };
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const fmt = s => { if (!s) return '—'; const [y,m,d] = s.split('-'); return `${+d} ${MESES[m-1]} ${y}`; };
+const uid = () => Math.random().toString(36).slice(2, 10);
+const DIAS = [['lun','Lunes'],['mar','Martes'],['mie','Miércoles'],['jue','Jueves'],['vie','Viernes'],['sab','Sábado'],['dom','Domingo']];
+const SEDES = ['Santa Tecla','Zacatecoluca','San Miguel','Santa Ana','La Unión'];
+
+/* ---------- 1. DATOS ---------- */
+const CLAVE = 'sse-prototipo-v2';
+
+function datosDeEjemplo() {
+  // Fechas relativas a hoy, para que el ejemplo siempre se vea reciente.
+  let sab = hoy(); while (fecha(sab).getDay() !== 6) sab = masDias(sab, -1);
+  const acts = ['Apoyo en el centro de cómputo: mantenimiento de equipos','Digitación del inventario de la biblioteca','Clases de refuerzo de ofimática a estudiantes','Actualización del sitio web de la institución','Soporte técnico al personal administrativo'];
+  const amb = ['Campaña de limpieza en la zona verde','Jornada de reciclaje y clasificación de desechos','Siembra de árboles en el huerto escolar','Campaña de limpieza en los alrededores'];
+  const registros = [], sinFestivo = f => festivo(f) ? masDias(f, -1) : f;
+  for (let w = 10; w >= 0; w--) {
+    const estado = w <= 1 ? 'pendiente' : w === 4 ? 'rechazado' : 'aprobado';
+    registros.push({ id: uid(), carnet: '251234', fecha: sinFestivo(masDias(sab, -7*w)), actividad: acts[w % acts.length], horas: 8, tipo: 'general', estado,
+      comentario: estado === 'rechazado' ? 'Ese día no aparece firmado por el supervisor en la hoja.' : '' });
+  }
+  [9, 8, 7, 1].forEach((w, i) => registros.push({ id: uid(), carnet: '251234', fecha: sinFestivo(masDias(sab, -7*w + 1)), actividad: amb[i], horas: i === 3 ? 4 : 5, tipo: 'ambiental', estado: w === 1 ? 'pendiente' : 'aprobado', comentario: '', evidencia: 'fotos-jornada.jpg' }));
+  for (let k = 1; k <= 35; k++) registros.push({ id: uid(), carnet: '249876', fecha: sinFestivo(masDias(hoy(), -(k*2 + 20))), actividad: k <= 8 ? amb[k % amb.length] : acts[k % acts.length], horas: 8, tipo: k <= 8 ? 'ambiental' : 'general', estado: 'aprobado', comentario: '' });
+  registros.push({ id: uid(), carnet: '249876', fecha: masDias(hoy(), -3), actividad: acts[1], horas: 6, tipo: 'general', estado: 'pendiente', comentario: '' });
+  const horarioVacio = () => Object.fromEntries(DIAS.map(([k]) => [k, { am: '', pm: '' }]));
+  const base = { escuela: 'Ingeniería en Computación', sede: 'Santa Tecla', coordinador: 'Ing. Coordinador de SSE (ejemplo)', jornada: 'Diurna', modalidad: 'Presencial' };
+  return {
+    sesion: null,
+    // Contraseñas a la vista solo porque es un prototipo. En la versión real las valida el servidor.
+    cuentas: [
+      { usuario: '251234', clave: 'demo1234', rol: 'estudiante' },
+      { usuario: '250042', clave: 'demo1234', rol: 'estudiante' },
+      { usuario: '249876', clave: 'demo1234', rol: 'estudiante' },
+      { usuario: 'coordinador', clave: 'demo1234', rol: 'profesor' },
+    ],
+    estudiantes: [
+      { ...base, carnet: '251234', nombre: 'Ana Lucía Martínez Rivas', tipoCarrera: 'tecnico', carrera: 'Técnico en Ingeniería en Desarrollo de Software', anioAcademico: '2026', anioEstudios: 'Segundo', correo: 'ana.martinez@ejemplo.edu.sv', telefono: '7000-0001', emergenciaNombre: 'Rosa Rivas (madre)', emergenciaTel: '7000-0002' },
+      { ...base, carnet: '250042', nombre: 'Carlos Ernesto Flores Gómez', tipoCarrera: 'ingenieria', carrera: 'Ingeniería en Desarrollo de Software', anioAcademico: '2026', anioEstudios: 'Primero', correo: 'carlos.flores@ejemplo.edu.sv', telefono: '7000-0003', emergenciaNombre: 'Marta Gómez', emergenciaTel: '7000-0004' },
+      { ...base, carnet: '249876', nombre: 'Diana Sofía Hernández López', tipoCarrera: 'tecnico', carrera: 'Técnico en Ingeniería en Desarrollo de Software', anioAcademico: '2026', anioEstudios: 'Segundo', correo: 'diana.hernandez@ejemplo.edu.sv', telefono: '7000-0005', emergenciaNombre: 'Luis Hernández', emergenciaTel: '7000-0006' },
+    ],
+    proyectos: [
+      { carnet: '251234', estado: 'aprobado', comentario: '', institucion: 'Centro Escolar San José (ejemplo)', instTelefono: '2200-0000',
+        actividadesPrincipales: 'Soporte técnico, digitación de inventario y clases de refuerzo de ofimática.', supervisor: 'Lic. Marta Elena Pérez', supCorreo: 'direccion@csanjose.ejemplo.sv', supTelefono: '7100-0000',
+        tiempoEstimado: '5 meses', fechaInicio: masDias(sab, -70), lugar: 'Centro Escolar San José, Santa Tecla', declaracion: true,
+        objetivos: [{ actividad: 'Soporte técnico y mantenimiento del centro de cómputo', objetivo: 'Mantener los equipos en funcionamiento para las clases', duracion: '160 horas' }, { actividad: 'Refuerzo de ofimática', objetivo: 'Que los estudiantes de noveno grado manejen documentos y hojas de cálculo', duracion: '80 horas' }],
+        horario: { ...horarioVacio(), sab: { am: '8:00 a 12:00', pm: '1:00 a 5:00' }, dom: { am: '8:00 a 12:00', pm: '' } } },
+      { carnet: '250042', estado: 'enviado', comentario: '', institucion: 'Alcaldía Municipal (ejemplo)', instTelefono: '2200-1111',
+        actividadesPrincipales: 'Digitalización de expedientes del archivo municipal.', supervisor: 'Sr. Jorge Alas', supCorreo: 'archivo@alcaldia.ejemplo.sv', supTelefono: '7100-1111',
+        tiempoEstimado: '8 meses', fechaInicio: masDias(hoy(), 7), lugar: 'Alcaldía Municipal', declaracion: true,
+        objetivos: [{ actividad: 'Digitalización de expedientes', objetivo: 'Tener el archivo de 2020 a 2024 en formato digital', duracion: '400 horas' }],
+        horario: { ...horarioVacio(), sab: { am: '8:00 a 12:00', pm: '' } } },
+      { carnet: '249876', estado: 'aprobado', comentario: '', institucion: 'Casa Comunal Las Flores (ejemplo)', instTelefono: '2200-2222', actividadesPrincipales: 'Talleres de computación para la comunidad.', supervisor: 'Sra. Elba Ramos', supCorreo: 'casacomunal@ejemplo.sv', supTelefono: '7100-2222', tiempoEstimado: '6 meses', fechaInicio: masDias(hoy(), -95), lugar: 'Casa Comunal Las Flores', declaracion: true, objetivos: [{ actividad: 'Talleres de computación', objetivo: 'Alfabetización digital de adultos', duracion: '300 horas' }], horario: horarioVacio() },
+    ],
+    registros,
+    finalizaciones: [],
+  };
+}
+
+let memoria = null;
+const api = {
+  cargar() {
+    if (memoria) return memoria;
+    try { const t = localStorage.getItem(CLAVE); if (t) memoria = JSON.parse(t); } catch (e) {}
+    if (!memoria) memoria = datosDeEjemplo();
+    return memoria;
+  },
+  guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(memoria)); } catch (e) {} },
+  reiniciar() { memoria = datosDeEjemplo(); this.guardar(); },
+  ingresar(usuario, clave) {
+    const c = this.cargar().cuentas.find(c => c.usuario === usuario.trim() && c.clave === clave);
+    if (c) { memoria.sesion = { usuario: c.usuario, rol: c.rol }; this.guardar(); }
+    return !!c;
+  },
+  salir() { memoria.sesion = null; this.guardar(); },
+  estudiante: carnet => api.cargar().estudiantes.find(e => e.carnet === carnet),
+  proyecto(carnet) {
+    let p = this.cargar().proyectos.find(p => p.carnet === carnet);
+    if (!p) { p = { carnet, estado: 'borrador', comentario: '', objetivos: [{}, {}], horario: Object.fromEntries(DIAS.map(([k]) => [k, { am: '', pm: '' }])) }; memoria.proyectos.push(p); }
+    return p;
+  },
+  registros: carnet => api.cargar().registros.filter(r => r.carnet === carnet).sort((a, b) => a.fecha.localeCompare(b.fecha)),
+  finalizacion(carnet) {
+    let f = this.cargar().finalizaciones.find(f => f.carnet === carnet);
+    if (!f) { f = { carnet, estado: 'borrador' }; memoria.finalizaciones.push(f); }
+    return f;
+  },
+};
+
+/* ---------- 2. REGLAS ---------- */
+const META = { tecnico: 300, ingenieria: 500 };          // horas totales según la carrera
+const MAX_DIA = 8;                                        // regla 16
+const PARTE_AMBIENTAL = 0.20;                             // regla 21
+const FILAS_POR_HOJA = 20;                                // filas de la hoja FBSSE-002 en papel
+
+
+// Regla nueva del coordinador: no se hacen horas sociales en días festivos de El Salvador.
+// Asuetos nacionales del art. 190 del Código de Trabajo. En Laravel esta lista va en una tabla editable.
+const FESTIVOS_FIJOS = [['01-01', 'Año Nuevo'], ['05-01', 'Día del Trabajo'], ['05-10', 'Día de la Madre'], ['06-17', 'Día del Padre'], ['08-06', 'Fiestas del Divino Salvador del Mundo'], ['09-15', 'Día de la Independencia'], ['11-02', 'Día de los Difuntos'], ['12-25', 'Navidad']];
+function pascua(a) { // domingo de Pascua (calendario gregoriano)
+  const g = a % 19, c = Math.floor(a / 100), h = (c - Math.floor(c / 4) - Math.floor((8 * c + 13) / 25) + 19 * g + 15) % 30;
+  const i = h - Math.floor(h / 28) * (1 - Math.floor(29 / (h + 1)) * Math.floor((21 - g) / 11)), j = (a + Math.floor(a / 4) + i + 2 - c + Math.floor(c / 4)) % 7;
+  const l = i - j, m = 3 + Math.floor((l + 40) / 44), d = l + 28 - 31 * Math.floor(m / 4);
+  return iso(new Date(a, m - 1, d));
+}
+function festivosDe(anio) {
+  const p = pascua(anio);
+  return [...FESTIVOS_FIJOS.map(([md, n]) => [`${anio}-${md}`, n]), [masDias(p, -3), 'Jueves Santo'], [masDias(p, -2), 'Viernes Santo'], [masDias(p, -1), 'Sábado Santo']].sort((a, b) => a[0].localeCompare(b[0]));
+}
+const festivo = f => f ? (festivosDe(+f.slice(0, 4)).find(x => x[0] === f) || [])[1] || '' : '';
+
+function resumen(carnet) {
+  const e = api.estudiante(carnet), rs = api.registros(carnet), meta = META[e.tipoCarrera];
+  const suma = f => rs.filter(f).reduce((t, r) => t + r.horas, 0);
+  const aprobadas = suma(r => r.estado === 'aprobado'), pendientes = suma(r => r.estado === 'pendiente');
+  const ambMeta = Math.ceil(meta * PARTE_AMBIENTAL);
+  return { meta, aprobadas, pendientes, faltan: Math.max(0, meta - aprobadas), ambMeta,
+    ambAprobadas: suma(r => r.estado === 'aprobado' && r.tipo === 'ambiental'), ambPendientes: suma(r => r.estado === 'pendiente' && r.tipo === 'ambiental') };
+}
+
+function validarRegistro(r, carnet) {
+  const err = {}, p = api.proyecto(carnet);
+  if (!r.fecha) err.fecha = 'Elige la fecha.';
+  else if (r.fecha > hoy()) err.fecha = 'La fecha no puede ser futura.';
+  else if (festivo(r.fecha)) err.fecha = `El ${fmt(r.fecha)} es día festivo (${festivo(r.fecha)}). No se hacen horas sociales en días festivos.`;
+  else if (p.fechaInicio && r.fecha < p.fechaInicio) err.fecha = `Es anterior al inicio de tu proyecto (${fmt(p.fechaInicio)}).`;
+  if (!Number.isInteger(r.horas) || r.horas < 1 || r.horas > MAX_DIA) err.horas = `Escribe horas enteras, de 1 a ${MAX_DIA}.`;
+  else if (r.fecha) {
+    const ya = api.registros(carnet).filter(x => x.fecha === r.fecha && x.estado !== 'rechazado').reduce((t, x) => t + x.horas, 0);
+    if (ya + r.horas > MAX_DIA) err.horas = `Ese día ya tiene ${ya} h. El máximo es ${MAX_DIA} h por día.`;
+  }
+  if ((r.actividad || '').trim().length < 5) err.actividad = 'Describe la actividad que hiciste.';
+  return err;
+}
+
+/* ---------- 3. PANTALLAS ---------- */
+const app = document.getElementById('app');
+const ui = { pestana: 'general', borrador: {}, errores: {}, errorIngreso: '' };
+
+const ESTADOS = { pendiente: ['aviso', 'En revisión'], aprobado: ['ok', 'Aprobado'], rechazado: ['mal', 'No aprobado'], borrador: ['', 'Borrador'], enviado: ['aviso', 'Enviado, en revisión'] };
+const pastilla = e => `<span class="pastilla ${ESTADOS[e][0]}">${ESTADOS[e][1]}</span>`;
+const campo = (name, label, val, o = {}) => `<label class="campo ${o.cls || ''}"><span>${label}</span>${
+  o.tipo === 'area' ? `<textarea name="${name}" id="c-${name}" ${o.req ? 'required' : ''} ${o.dis ? 'disabled' : ''}>${esc(val)}</textarea>`
+  : o.opciones ? `<select name="${name}" id="c-${name}" ${o.req ? 'required' : ''} ${o.dis ? 'disabled' : ''}><option value="">Elige una opción</option>${o.opciones.map(x => `<option ${x === val ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
+  : `<input name="${name}" id="c-${name}" type="${o.tipo || 'text'}" value="${esc(val)}" ${o.req ? 'required' : ''} ${o.dis ? 'disabled' : ''} ${o.extra || ''} class="${o.error ? 'con-error' : ''}">`
+}${o.error ? `<small class="error">${esc(o.error)}</small>` : o.ayuda ? `<small>${o.ayuda}</small>` : ''}</label>`;
+
+function vistaIngreso() {
+  return `<main class="ingreso"><form class="hoja" data-form="ingreso" novalidate>
+    <div><span class="codigo">SSE · ITCA-FEPADE</span><h1 style="margin-top:10px">Registro de horas sociales</h1>
+    <p class="gris" style="margin-top:6px">Entra con tu carnet para registrar tu servicio social y ver cuántas horas llevas.</p></div>
+    ${campo('usuario', 'Carnet', '', { extra: 'autocomplete="username" inputmode="numeric"' })}
+    ${campo('clave', 'Contraseña', '', { tipo: 'password', extra: 'autocomplete="current-password"' })}
+    ${ui.errorIngreso ? `<p class="nota mal">${ui.errorIngreso}</p>` : ''}
+    <button class="boton">Entrar</button>
+    <div class="demo"><span class="gris">Cuentas de ejemplo del prototipo:</span>
+      <div class="fila"><button type="button" class="boton suave chico" data-accion="demo" data-u="251234">Entrar como estudiante</button>
+      <button type="button" class="boton suave chico" data-accion="demo" data-u="coordinador">Entrar como profesor</button></div>
+    </div></form></main>`;
+}
+
+function marco(actual, contenido) {
+  const s = api.cargar().sesion, prof = s.rol === 'profesor';
+  const enlaces = prof ? [['revision', 'Revisión de horas', 'Vista del profesor'], ['reglas', 'Reglas', '25 puntos del SSE']]
+    : [['panel', 'Mi avance', 'Resumen'], ['proyecto', 'Proyecto de trabajo', 'FBSSE-001'], ['registro', 'Registro diario', 'FBSSE-002'], ['finalizacion', 'Finalización', 'FBSSE-003'], ['reglas', 'Reglas', '25 puntos del SSE']];
+  const nombre = prof ? 'Coordinador de SSE' : api.estudiante(s.usuario).nombre;
+  return `<div class="marco"><aside class="lateral">
+    <div class="marca"><b>Horas sociales</b><span>Servicio Social Estudiantil · ITCA-FEPADE</span></div>
+    <nav class="nav" aria-label="Secciones">${enlaces.map(([h, t, c]) => `<a href="#${h}" ${h === actual ? 'aria-current="page"' : ''}>${t}<small>${c}</small></a>`).join('')}</nav>
+    <div class="quien"><div><b>${esc(nombre)}</b><br><span class="gris">${prof ? 'Profesor' : 'Carnet ' + esc(s.usuario)}</span></div>
+      <div class="fila"><button class="boton plano chico" data-accion="salir">Salir</button><button class="boton plano chico" data-accion="reiniciar" title="Vuelve a cargar los datos de ejemplo">Reiniciar ejemplo</button></div></div>
+  </aside><main class="principal"><div class="pila">${contenido}</div></main></div>`;
+}
+
+function vistaPanel() {
+  const c = api.cargar().sesion.usuario, e = api.estudiante(c), p = api.proyecto(c), x = resumen(c), rs = api.registros(c);
+  const pct = n => (100 * n / x.meta).toFixed(2) + '%';
+  const rech = rs.filter(r => r.estado === 'rechazado');
+  return `<div><div class="cabecera"><h1>Mi avance</h1></div>
+    <p class="bajada">${esc(e.carrera)}. Tu carrera pide <b>${x.meta} horas</b> de servicio social; al menos ${x.ambMeta} deben ser en proyectos de medio ambiente.</p></div>
+  <section class="hoja"><div class="cifras">
+      <div class="cifra"><b>${x.aprobadas}</b><span>horas aprobadas</span></div>
+      <div class="cifra"><b>${x.pendientes}</b><span>horas en revisión</span></div>
+      <div class="cifra"><b>${x.faltan}</b><span>horas que faltan</span></div>
+      <div class="cifra"><b>${x.ambAprobadas}<span style="font:inherit;color:var(--gris)"> / ${x.ambMeta}</span></b><span>horas de medio ambiente</span></div>
+    </div>
+    <div class="barra" style="margin:18px 0 8px" role="img" aria-label="${x.aprobadas} de ${x.meta} horas aprobadas"><i class="a" style="width:${pct(x.aprobadas)}"></i><i class="p" style="width:${pct(x.pendientes)}"></i></div>
+    <div class="leyenda"><span><i style="background:var(--azul)"></i>Aprobadas</span><span><i style="background:repeating-linear-gradient(135deg,var(--azul) 0 3px,var(--azul-suave) 3px 6px)"></i>En revisión</span><span><i style="background:var(--papel);border:1px solid var(--linea)"></i>Faltan</span></div>
+  </section>
+  ${p.estado !== 'aprobado' ? `<p class="nota aviso"><b>Tu proyecto de trabajo aún no está aprobado.</b> No puedes registrar horas hasta que el coordinador lo autorice. <a href="#proyecto">Ir al proyecto</a></p>` : ''}
+  ${rech.length ? `<p class="nota mal"><b>${rech.length} registro${rech.length > 1 ? 's' : ''} no aprobado${rech.length > 1 ? 's' : ''}.</b> Revisa el comentario del coordinador en <a href="#registro">Registro diario</a>.</p>` : ''}
+  ${x.ambAprobadas + x.ambPendientes < x.ambMeta ? `<p class="nota">Te faltan <b>${x.ambMeta - x.ambAprobadas - x.ambPendientes} horas de medio ambiente</b> para llegar al 20 %. Recuerda guardar fotos como evidencia.</p>` : ''}
+  <section class="hoja"><header><h2>Proyecto de trabajo</h2>${pastilla(p.estado)}<span class="codigo">FBSSE-001</span></header>
+    <p><b>${esc(p.institucion || 'Sin institución todavía')}</b></p><p class="gris">Supervisa: ${esc(p.supervisor || '—')} · Inicio: ${fmt(p.fechaInicio)}</p></section>
+  <section class="hoja"><header><h2>Últimos registros</h2><a class="boton chico" href="#registro" style="margin-left:auto">Registrar horas</a></header>
+    <div class="desliza"><table><thead><tr><th>Fecha</th><th>Actividad</th><th>Tipo</th><th class="num">Horas</th><th>Estado</th></tr></thead><tbody>
+    ${rs.slice(-6).reverse().map(r => `<tr><td class="num" style="text-align:left;white-space:nowrap">${fmt(r.fecha)}</td><td>${esc(r.actividad)}</td><td>${r.tipo === 'ambiental' ? 'Medio ambiente' : 'General'}</td><td class="num">${r.horas}</td><td>${pastilla(r.estado)}</td></tr>`).join('') || '<tr><td colspan="5" class="gris">Todavía no hay registros.</td></tr>'}
+    </tbody></table></div></section>`;
+}
+
+function vistaProyecto() {
+  const c = api.cargar().sesion.usuario, e = api.estudiante(c), p = api.proyecto(c);
+  const dis = p.estado === 'enviado' || p.estado === 'aprobado', o = { dis, req: true };
+  const avisos = { borrador: '', enviado: '<p class="nota aviso">Enviaste este proyecto. El coordinador lo está revisando.</p>',
+    aprobado: '<p class="nota ok">El coordinador aprobó este proyecto. Ya puedes registrar horas.</p>',
+    rechazado: `<p class="nota mal"><b>No aprobado.</b> ${esc(p.comentario || 'Corrige y vuelve a enviar.')}</p>` };
+  return `<div><div class="cabecera"><h1>Proyecto de trabajo</h1><span class="codigo">FBSSE-001</span>${pastilla(p.estado)}</div>
+    <p class="bajada">Es lo primero que se llena. El coordinador debe aprobarlo antes de que empieces tu servicio social. Si lo haces en más de un lugar, se llena uno por cada lugar.</p></div>
+  ${avisos[p.estado]}
+  <form class="pila" data-form="proyecto">
+  <section class="hoja"><header><h2>1. Datos generales</h2></header><div class="rejilla">
+    ${campo('e_nombre', 'Nombre completo del estudiante', e.nombre, { ...o, cls: 'ancho' })}
+    ${campo('e_carnet', 'N.º de carnet', e.carnet, { dis: true })}
+    ${campo('e_anioAcademico', 'Año académico', e.anioAcademico, o)}
+    ${campo('e_escuela', 'Escuela', e.escuela, o)}
+    ${campo('e_sede', 'Sede de ITCA', e.sede, { ...o, opciones: SEDES })}
+    ${campo('e_carrera', 'Carrera', e.carrera, { ...o, cls: 'ancho' })}
+    ${campo('e_correo', 'Correo electrónico', e.correo, { ...o, tipo: 'email' })}
+    ${campo('e_telefono', 'Teléfono de contacto', e.telefono, { ...o, tipo: 'tel' })}
+    ${campo('e_emergenciaNombre', 'En caso de emergencia contactar a', e.emergenciaNombre, o)}
+    ${campo('e_emergenciaTel', 'Teléfono de emergencia', e.emergenciaTel, { ...o, tipo: 'tel' })}
+    ${campo('e_coordinador', 'Coordinador de Servicio Social Estudiantil', e.coordinador, { ...o, cls: 'ancho' })}
+  </div></section>
+  <section class="hoja"><header><h2>2. Institución donde harás tu servicio social</h2></header><div class="rejilla">
+    ${campo('institucion', 'Nombre de la institución', p.institucion, o)}
+    ${campo('instTelefono', 'Teléfono', p.instTelefono, { ...o, tipo: 'tel' })}
+    ${campo('actividadesPrincipales', 'Principales actividades a realizar', p.actividadesPrincipales, { ...o, tipo: 'area', cls: 'ancho' })}
+    ${campo('supervisor', 'Persona responsable de supervisarte', p.supervisor, { ...o, cls: 'ancho' })}
+    ${campo('supCorreo', 'Correo de la persona responsable', p.supCorreo, { ...o, tipo: 'email' })}
+    ${campo('supTelefono', 'Teléfono de contacto', p.supTelefono, { ...o, tipo: 'tel' })}
+    ${campo('tiempoEstimado', 'Tiempo estimado de las actividades', p.tiempoEstimado, { ...o, ayuda: 'Por ejemplo: 5 meses' })}
+    ${campo('fechaInicio', 'Fecha de inicio del servicio social', p.fechaInicio, { ...o, tipo: 'date' })}
+  </div></section>
+  <section class="hoja"><header><h2>3. Objetivos de las actividades</h2></header>
+    <div class="desliza"><table><thead><tr><th>N.º</th><th>Actividad principal</th><th>Objetivo</th><th>Duración</th></tr></thead><tbody>
+    ${(p.objetivos.length ? p.objetivos : [{}]).map((ob, i) => `<tr><td class="num">${i + 1}</td>
+      <td><input name="ob_${i}_actividad" id="c-ob-${i}-a" aria-label="Actividad ${i + 1}" value="${esc(ob.actividad)}" ${dis ? 'disabled' : ''} ${i === 0 ? 'required' : ''} style="min-width:200px"></td>
+      <td><input name="ob_${i}_objetivo" id="c-ob-${i}-o" aria-label="Objetivo ${i + 1}" value="${esc(ob.objetivo)}" ${dis ? 'disabled' : ''} ${i === 0 ? 'required' : ''} style="min-width:200px"></td>
+      <td><input name="ob_${i}_duracion" id="c-ob-${i}-d" aria-label="Duración ${i + 1}" value="${esc(ob.duracion)}" ${dis ? 'disabled' : ''} ${i === 0 ? 'required' : ''} style="min-width:110px"></td></tr>`).join('')}
+    </tbody></table></div>
+    ${dis ? '' : '<div class="fila" style="margin-top:12px"><button type="button" class="boton plano chico" data-accion="mas-objetivo">Agregar otra actividad</button></div>'}
+  </section>
+  <section class="hoja"><header><h2>4. Horario</h2></header>
+    <p class="gris" style="margin-bottom:12px">Escribe las horas en que asistirás. No puede coincidir con tus clases ni pasar de 8 horas por día. Deja vacío lo que no uses.</p>
+    <div class="desliza"><table class="horario"><thead><tr><th>Hora / Día</th>${DIAS.map(d => `<th>${d[1]}</th>`).join('')}</tr></thead><tbody>
+    ${['am', 'pm'].map(t => `<tr><th>${t.toUpperCase()}</th>${DIAS.map(([k, n]) => `<td><input name="h_${k}_${t}" id="c-h-${k}-${t}" aria-label="${n} ${t.toUpperCase()}" value="${esc(p.horario[k][t])}" ${dis ? 'disabled' : ''}></td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>
+    <div class="rejilla" style="margin-top:16px">${campo('lugar', 'Lugar donde se ejecutará el proyecto', p.lugar, { ...o, cls: 'ancho' })}
+    <label class="ancho fila" style="align-items:flex-start;flex-wrap:nowrap"><input type="checkbox" name="declaracion" id="c-declaracion" ${p.declaracion ? 'checked' : ''} ${dis ? 'disabled' : ''} required style="margin-top:4px">
+      <span>Doy fe de que he leído las reglas y recomendaciones de la charla informativa de Servicio Social Estudiantil, y me comprometo a realizar las actividades de este proyecto y a reportar cualquier anomalía a mi coordinador.</span></label></div>
+  </section>
+  <section class="hoja"><header><h2>5. Resolución del coordinador</h2>${pastilla(p.estado)}</header>
+    <p class="gris">La marca el coordinador desde su aplicación. La firma y el sello se siguen poniendo a mano en la hoja impresa.</p>
+    <div class="fila" style="margin-top:14px">${dis
+      ? '<button type="button" class="boton plano" data-accion="editar-proyecto">Editar y volver a enviar</button><span class="gris">Si lo editas, necesita una nueva aprobación.</span>'
+      : '<button type="button" class="boton suave" data-accion="guardar-proyecto">Guardar borrador</button><button class="boton">Enviar al coordinador</button>'}</div>
+  </section></form>`;
+}
+
+function vistaRegistro() {
+  const c = api.cargar().sesion.usuario, p = api.proyecto(c), x = resumen(c), amb = ui.pestana === 'ambiental';
+  const rs = api.registros(c).filter(r => r.tipo === ui.pestana), b = ui.borrador, er = ui.errores;
+  const activo = p.estado === 'aprobado';
+  let n = 0;
+  const filas = rs.map(r => { const cuenta = r.estado !== 'rechazado'; if (cuenta) n++;
+    return `<tr><td class="num gris" style="white-space:nowrap">${cuenta ? `H${Math.ceil(n / FILAS_POR_HOJA)} · ${((n - 1) % FILAS_POR_HOJA) + 1}` : '—'}</td><td style="white-space:nowrap">${fmt(r.fecha)}</td>
+      <td>${esc(r.actividad)}${r.comentario ? `<br><small style="color:var(--mal)">Coordinador: ${esc(r.comentario)}</small>` : ''}</td>
+      <td class="num">${r.horas}</td><td>${pastilla(r.estado)}</td>
+      <td>${r.estado !== 'aprobado' ? `<button class="boton plano chico" data-accion="borrar-registro" data-id="${r.id}">Eliminar</button>` : ''}</td></tr>`; }).join('');
+  const total = rs.filter(r => r.estado !== 'rechazado').reduce((t, r) => t + r.horas, 0);
+  return `<div><div class="cabecera"><h1>Registro diario</h1><span class="codigo">FBSSE-002</span></div>
+    <p class="bajada">Anota cada día que hagas servicio social. El coordinador revisa lo que envías y decide si las horas quedan aprobadas.</p></div>
+  ${activo ? '' : '<p class="nota aviso"><b>Aún no puedes registrar horas.</b> Primero el coordinador debe aprobar tu <a href="#proyecto">proyecto de trabajo</a>.</p>'}
+  <div class="dos">
+  <form class="hoja pila" data-form="registro" novalidate style="gap:14px"><h2>Nuevo registro</h2>
+    ${campo('fecha', 'Fecha', b.fecha ?? hoy(), { tipo: 'date', dis: !activo, error: er.fecha, extra: `max="${hoy()}"`, ayuda: 'No se aceptan días festivos.' })}
+    <label class="campo"><span>Tipo de actividad</span><select name="tipo" id="c-tipo" ${activo ? '' : 'disabled'}>
+      <option value="general" ${(b.tipo ?? ui.pestana) === 'general' ? 'selected' : ''}>Servicio social general</option>
+      <option value="ambiental" ${(b.tipo ?? ui.pestana) === 'ambiental' ? 'selected' : ''}>Cuido y conservación del medio ambiente</option></select></label>
+    ${campo('actividad', 'Actividad desarrollada', b.actividad, { tipo: 'area', dis: !activo, error: er.actividad })}
+    ${campo('horas', 'Total de horas del día', b.horas ?? '', { tipo: 'number', dis: !activo, error: er.horas, extra: 'min="1" max="8" step="1" inputmode="numeric"', ayuda: 'Solo horas enteras. Máximo 8 por día.' })}
+    <label class="campo" id="caja-evidencia" ${(b.tipo ?? ui.pestana) === 'ambiental' ? '' : 'hidden'}><span>Fotos de evidencia</span><input type="file" name="evidencia" id="c-evidencia" accept="image/*" ${activo ? '' : 'disabled'}><small>Obligatorias para las horas de medio ambiente. En el prototipo solo se guarda el nombre del archivo.</small></label>
+    <button class="boton" ${activo ? '' : 'disabled'}>Enviar a revisión</button>
+  </form>
+  <section class="hoja"><header><div class="pestanas"><button data-accion="pestana" data-p="general" aria-pressed="${!amb}">Control general</button><button data-accion="pestana" data-p="ambiental" aria-pressed="${amb}">Medio ambiente (20 %)</button></div></header>
+    ${amb ? `<p class="gris" style="margin-bottom:10px">Llevas ${x.ambAprobadas} horas aprobadas de las ${x.ambMeta} que pide tu carrera.</p>` : ''}
+    <div class="desliza"><table><thead><tr><th title="Hoja y fila donde va este registro en el formulario en papel">Hoja · fila</th><th>Fecha</th><th>Actividad desarrollada</th><th class="num">Horas</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${filas || '<tr><td colspan="6" class="gris">Todavía no hay registros aquí.</td></tr>'}</tbody>
+    <tfoot><tr><td colspan="3">Total de horas (sin las no aprobadas)</td><td class="num">${total}</td><td colspan="2"></td></tr></tfoot></table></div>
+    <p class="gris" style="margin-top:10px;font-size:13px">«Hoja · fila» te dice en qué hoja y renglón del formulario en papel va cada registro (20 renglones por hoja).</p>
+  </section></div>`;
+}
+
+function vistaFinalizacion() {
+  const c = api.cargar().sesion.usuario, e = api.estudiante(c), p = api.proyecto(c), f = api.finalizacion(c), x = resumen(c);
+  const rs = api.registros(c).filter(r => r.estado !== 'rechazado'), ultimo = rs.length ? rs[rs.length - 1].fecha : '';
+  const dis = f.estado === 'enviado', o = { dis, req: true }, fin = f.fechaFin || ultimo;
+  return `<div><div class="cabecera"><h1>Hoja de finalización</h1><span class="codigo">FBSSE-003</span>${pastilla(f.estado)}</div>
+    <p class="bajada">Se llena cuando terminas tu servicio social en la institución. Las fechas deben ser las mismas que aparecen en tu proyecto y en tu registro diario.</p></div>
+  ${x.pendientes ? `<p class="nota aviso">Tienes <b>${x.pendientes} horas en revisión</b>. Conviene esperar a que el coordinador las revise antes de finalizar.</p>` : ''}
+  ${fin ? `<p class="nota">Si terminas el ${fmt(fin)}, tienes hasta el <b>${fmt(masMeses(fin, 6))}</b> para entregar la documentación. Después de 6 meses el servicio social se anula.</p>` : ''}
+  ${ui.errores.fin ? `<p class="nota mal">${esc(ui.errores.fin)}</p>` : ''}
+  <form class="pila" data-form="finalizacion">
+  <section class="hoja"><header><h2>Datos del estudiante</h2></header><div class="rejilla">
+    ${campo('x_nombre', 'Nombre completo', e.nombre, { dis: true, cls: 'ancho' })}
+    ${campo('x_escuela', 'Escuela de ITCA-FEPADE', e.escuela, { dis: true })}
+    ${campo('e_sede', 'Sede donde estudia', e.sede, { ...o, opciones: SEDES })}
+    ${campo('x_carrera', 'Carrera que estudia', e.carrera, { dis: true, cls: 'ancho' })}
+    ${campo('x_carnet', 'Carné N.º', e.carnet, { dis: true })}
+    ${campo('e_jornada', 'Jornada', e.jornada, { ...o, opciones: ['Diurna', 'Nocturna'] })}
+    ${campo('e_modalidad', 'Modalidad de estudio', e.modalidad, { ...o, opciones: ['Presencial', 'Semipresencial', 'Virtual'] })}
+    ${campo('e_anioEstudios', 'Año de estudios', e.anioEstudios, { ...o, opciones: ['Primero', 'Segundo', 'Tercero', 'Otro'] })}
+    ${campo('e_telefono', 'Teléfono', e.telefono, { ...o, tipo: 'tel' })}
+    ${campo('e_correo', 'Correo electrónico', e.correo, { ...o, tipo: 'email' })}
+  </div></section>
+  <section class="hoja"><header><h2>Datos de la institución</h2></header><div class="rejilla">
+    ${campo('x_institucion', 'Nombre completo de la institución', p.institucion, { dis: true, cls: 'ancho' })}
+    ${campo('direccion', 'Dirección', f.direccion, { ...o, cls: 'ancho' })}
+    ${campo('instTelefonos', 'Teléfonos', f.instTelefonos ?? p.instTelefono, { ...o, tipo: 'tel' })}
+    ${campo('instCorreo', 'Correo electrónico institucional', f.instCorreo ?? p.supCorreo, { ...o, tipo: 'email' })}
+    ${campo('x_inicio', 'Fecha de inicio', p.fechaInicio, { tipo: 'date', dis: true, ayuda: 'Viene de tu proyecto de trabajo.' })}
+    ${campo('fechaFin', 'Fecha de finalización', fin, { ...o, tipo: 'date', ayuda: ultimo ? `Tu último registro es del ${fmt(ultimo)}.` : '' })}
+    ${campo('observaciones', 'Observaciones', f.observaciones, { tipo: 'area', dis, cls: 'ancho' })}
+  </div>
+  <div class="fila" style="margin-top:16px">${dis ? '<span class="gris">Enviada al coordinador. La firma y el sello van en la hoja impresa.</span>' : '<button class="boton">Enviar hoja de finalización</button>'}</div>
+  </section></form>`;
+}
+
+function vistaReglas() {
+  return `<div><div class="cabecera"><h1>Reglas del servicio social</h1></div><p class="bajada">Resumen de los 25 puntos de la hoja de indicaciones. Este registro en línea no reemplaza las hojas en papel: te ayuda a llevar la cuenta.</p></div>
+  <section class="hoja"><header><h2>Lo que este formulario revisa por ti</h2></header><ul class="lista">
+    <li>No puedes registrar horas antes de que el coordinador apruebe tu proyecto (regla 3).</li>
+    <li>Máximo 8 horas por día (regla 16) y solo horas enteras (regla 17).</li>
+    <li>No se registran horas en días festivos del calendario salvadoreño (regla nueva del coordinador).</li>
+    <li>Las fechas de inicio y fin coinciden en todos los formularios (regla 20).</li>
+    <li>Al menos el 20 % de las horas en proyectos de medio ambiente, con fotos de evidencia (regla 21).</li>
+    <li>Te avisa la fecha límite de 6 meses para entregar la documentación (regla 18).</li></ul></section>
+  <section class="hoja"><header><h2>Días festivos de ${hoy().slice(0, 4)}</h2></header>
+    <p class="gris" style="margin-bottom:10px">En estas fechas no se pueden registrar horas sociales. Son los asuetos nacionales; el coordinador puede agregar otros, como la fiesta patronal de cada sede.</p>
+    <div class="desliza"><table><thead><tr><th>Fecha</th><th>Festividad</th></tr></thead><tbody>
+    ${festivosDe(+hoy().slice(0, 4)).map(([f, n]) => `<tr><td style="white-space:nowrap">${fmt(f)}</td><td>${n}</td></tr>`).join('')}</tbody></table></div></section>
+  <section class="hoja"><header><h2>Lo que sigue siendo en papel</h2></header><ul class="lista">
+    <li>Las hojas oficiales se llenan a mano, con lapicero de tinta azul y por un solo lado.</li>
+    <li>Sin tachones, letras repintadas, corrector, manchas, arrugas ni dobleces. Tampoco lápiz repintado.</li>
+    <li>Firmas y sellos originales, en azul. No se aceptan escaneados.</li>
+    <li>Solo el coordinador recibe la documentación, completa, firmada y sellada.</li>
+    <li>El servicio de medio ambiente es obligatorio en el primer ciclo de la carrera.</li>
+    <li>Puedes hacerlo en varios lugares, uno a la vez, con una solicitud aprobada por cada lugar.</li>
+    <li>No puede coincidir con tus fechas y horas de clases.</li></ul></section>`;
+}
+
+function vistaRevision() {
+  const d = api.cargar(), nombre = c => api.estudiante(c).nombre;
+  const proys = d.proyectos.filter(p => p.estado === 'enviado'), pend = d.registros.filter(r => r.estado === 'pendiente').sort((a, b) => a.fecha.localeCompare(b.fecha));
+  return `<div><div class="cabecera"><h1>Revisión de horas</h1><span class="codigo">VISTA DE EJEMPLO</span></div>
+    <p class="bajada">Así se vería la parte del profesor. En la versión final esta pantalla vive dentro de su aplicación; aquí sirve para probar el recorrido completo: el estudiante envía y el profesor aprueba o no.</p></div>
+  <section class="hoja"><header><h2>Proyectos de trabajo por aprobar</h2><span class="pastilla ${proys.length ? 'aviso' : ''}">${proys.length}</span></header>
+    ${proys.map(p => `<div class="fila" style="justify-content:space-between;padding:10px 0;border-top:1px solid var(--linea)">
+      <div><b>${esc(nombre(p.carnet))}</b> <span class="gris">· carnet ${p.carnet}</span><br>${esc(p.institucion)} <span class="gris">· supervisa ${esc(p.supervisor)} · inicia ${fmt(p.fechaInicio)}</span></div>
+      <div class="fila"><input id="cp-${p.carnet}" aria-label="Comentario" placeholder="Comentario (opcional)" style="width:210px"><button class="boton chico" data-accion="resolver-proyecto" data-c="${p.carnet}" data-e="aprobado">Aprobar</button><button class="boton plano chico" data-accion="resolver-proyecto" data-c="${p.carnet}" data-e="rechazado">No aprobar</button></div></div>`).join('') || '<p class="gris">No hay proyectos esperando.</p>'}
+  </section>
+  <section class="hoja"><header><h2>Horas por revisar</h2><span class="pastilla ${pend.length ? 'aviso' : ''}">${pend.length}</span></header>
+    <div class="desliza"><table><thead><tr><th>Estudiante</th><th>Fecha</th><th>Actividad</th><th>Tipo</th><th class="num">Horas</th><th>Comentario</th><th></th></tr></thead><tbody>
+    ${pend.map(r => `<tr><td>${esc(nombre(r.carnet))}</td><td style="white-space:nowrap">${fmt(r.fecha)}</td><td>${esc(r.actividad)}</td><td>${r.tipo === 'ambiental' ? 'Medio ambiente' : 'General'}</td><td class="num">${r.horas}</td>
+      <td><input id="cr-${r.id}" aria-label="Comentario" placeholder="Opcional" style="min-width:140px"></td>
+      <td style="white-space:nowrap"><button class="boton chico" data-accion="resolver-registro" data-id="${r.id}" data-e="aprobado">Aprobar</button> <button class="boton plano chico" data-accion="resolver-registro" data-id="${r.id}" data-e="rechazado">No aprobar</button></td></tr>`).join('') || '<tr><td colspan="7" class="gris">No hay horas esperando revisión.</td></tr>'}
+    </tbody></table></div></section>
+  <section class="hoja"><header><h2>Estudiantes</h2></header>
+    <div class="desliza"><table><thead><tr><th>Estudiante</th><th>Carnet</th><th>Proyecto</th><th class="num">Meta</th><th class="num">Aprobadas</th><th class="num">En revisión</th><th class="num">Faltan</th><th class="num">Medio ambiente</th><th style="min-width:120px">Avance</th></tr></thead><tbody>
+    ${d.estudiantes.map(e => { const x = resumen(e.carnet), p = api.proyecto(e.carnet);
+      return `<tr><td>${esc(e.nombre)}</td><td class="num">${e.carnet}</td><td>${pastilla(p.estado)}</td><td class="num">${x.meta}</td><td class="num">${x.aprobadas}</td><td class="num">${x.pendientes}</td><td class="num">${x.faltan}</td><td class="num">${x.ambAprobadas} / ${x.ambMeta}</td>
+      <td><div class="barra" style="height:10px;margin-top:5px"><i class="${x.faltan ? 'a' : 'v'}" style="width:${Math.min(100, 100 * x.aprobadas / x.meta)}%"></i></div></td></tr>`; }).join('')}
+    </tbody></table></div></section>`;
+}
+
+const VISTAS = { panel: vistaPanel, proyecto: vistaProyecto, registro: vistaRegistro, finalizacion: vistaFinalizacion, reglas: vistaReglas, revision: vistaRevision };
+
+function pintar() {
+  const s = api.cargar().sesion;
+  if (!s) { app.innerHTML = vistaIngreso(); return; }
+  const permitidas = s.rol === 'profesor' ? ['revision', 'reglas'] : ['panel', 'proyecto', 'registro', 'finalizacion', 'reglas'];
+  const ruta = location.hash.slice(1), actual = permitidas.includes(ruta) ? ruta : permitidas[0];
+  app.innerHTML = marco(actual, VISTAS[actual]());
+}
+let reloj;
+function avisar(t) { const a = document.getElementById('aviso-flotante'); a.textContent = t; a.classList.add('ver'); clearTimeout(reloj); reloj = setTimeout(() => a.classList.remove('ver'), 3200); }
+
+/* ---------- acciones ---------- */
+function leerProyecto(form) {
+  const c = api.cargar().sesion.usuario, e = api.estudiante(c), p = api.proyecto(c), d = Object.fromEntries(new FormData(form));
+  const objetivos = [];
+  for (const [k, v] of Object.entries(d)) {
+    if (k.startsWith('e_')) e[k.slice(2)] = v.trim();
+    else if (k.startsWith('ob_')) { const [, i, campo] = k.split('_'); (objetivos[i] ??= {})[campo] = v.trim(); }
+    else if (k.startsWith('h_')) { const [, dia, t] = k.split('_'); p.horario[dia][t] = v.trim(); }
+    else if (k !== 'declaracion') p[k] = v.trim();
+  }
+  p.objetivos = objetivos; p.declaracion = !!d.declaracion;
+  return p;
+}
+
+document.addEventListener('submit', ev => {
+  ev.preventDefault();
+  const form = ev.target, tipo = form.dataset.form, d = Object.fromEntries(new FormData(form));
+  if (tipo === 'ingreso') {
+    if (api.ingresar(d.usuario, d.clave)) { ui.errorIngreso = ''; location.hash = ''; }
+    else ui.errorIngreso = 'El carnet o la contraseña no coinciden. Revisa e intenta de nuevo.';
+    pintar();
+  }
+  if (tipo === 'proyecto') {
+    const p = leerProyecto(form);
+    p.objetivos = p.objetivos.filter(o => o.actividad || o.objetivo || o.duracion);
+    if (festivo(p.fechaInicio)) { api.guardar(); pintar(); avisar(`La fecha de inicio es día festivo (${festivo(p.fechaInicio)}). Elige otra fecha.`); return; }
+    p.estado = 'enviado'; p.comentario = ''; api.guardar(); pintar(); avisar('Proyecto enviado al coordinador.'); scrollTo(0, 0);
+  }
+  if (tipo === 'registro') {
+    const c = api.cargar().sesion.usuario, archivo = form.evidencia.files[0];
+    const r = { id: uid(), carnet: c, fecha: d.fecha, tipo: d.tipo, actividad: d.actividad.trim(), horas: /^\d+$/.test(d.horas) ? +d.horas : NaN, estado: 'pendiente', comentario: '', evidencia: archivo ? archivo.name : '' };
+    ui.errores = validarRegistro(r, c);
+    if (Object.keys(ui.errores).length) { ui.borrador = d; pintar(); return; }
+    memoria.registros.push(r); api.guardar(); ui.borrador = {}; ui.pestana = r.tipo; pintar();
+    avisar(r.tipo === 'ambiental' && !archivo ? 'Registro enviado. Recuerda guardar las fotos de evidencia.' : 'Registro enviado a revisión.');
+  }
+  if (tipo === 'finalizacion') {
+    const c = api.cargar().sesion.usuario, e = api.estudiante(c), f = api.finalizacion(c);
+    const rs = api.registros(c).filter(r => r.estado !== 'rechazado'), ultimo = rs.length ? rs[rs.length - 1].fecha : '';
+    for (const [k, v] of Object.entries(d)) { if (k.startsWith('e_')) e[k.slice(2)] = v; else if (!k.startsWith('x_')) f[k] = v.trim(); }
+    ui.errores = {};
+    if (!ultimo) ui.errores.fin = 'Todavía no tienes horas registradas, así que no hay nada que finalizar.';
+    else if (f.fechaFin !== ultimo) ui.errores.fin = `La fecha de finalización debe coincidir con tu último día registrado (${fmt(ultimo)}).`;
+    else { f.estado = 'enviado'; avisar('Hoja de finalización enviada.'); }
+    api.guardar(); pintar(); scrollTo(0, 0);
+  }
+});
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-accion]'); if (!b) return;
+  const a = b.dataset.accion, d = api.cargar(), c = d.sesion && d.sesion.usuario;
+  if (a === 'demo') { api.ingresar(b.dataset.u, 'demo1234'); location.hash = ''; pintar(); }
+  if (a === 'salir') { api.salir(); location.hash = ''; pintar(); }
+  if (a === 'reiniciar') { const s = d.sesion; api.reiniciar(); memoria.sesion = s; api.guardar(); pintar(); avisar('Se cargaron de nuevo los datos de ejemplo.'); }
+  if (a === 'pestana') { ui.pestana = b.dataset.p; ui.borrador = {}; ui.errores = {}; pintar(); }
+  if (a === 'guardar-proyecto') { leerProyecto(b.form); api.guardar(); pintar(); avisar('Borrador guardado.'); }
+  if (a === 'mas-objetivo') { leerProyecto(b.form).objetivos.push({}); api.guardar(); pintar(); }
+  if (a === 'editar-proyecto') { api.proyecto(c).estado = 'borrador'; api.guardar(); pintar(); }
+  if (a === 'borrar-registro') { d.registros = d.registros.filter(r => r.id !== b.dataset.id); api.guardar(); pintar(); avisar('Registro eliminado.'); }
+  if (a === 'resolver-registro') { const r = d.registros.find(r => r.id === b.dataset.id); r.estado = b.dataset.e; r.comentario = document.getElementById('cr-' + r.id).value.trim(); api.guardar(); pintar(); avisar(r.estado === 'aprobado' ? 'Horas aprobadas.' : 'Horas marcadas como no aprobadas.'); }
+  if (a === 'resolver-proyecto') { const p = api.proyecto(b.dataset.c); p.estado = b.dataset.e; p.comentario = document.getElementById('cp-' + p.carnet).value.trim(); api.guardar(); pintar(); avisar(p.estado === 'aprobado' ? 'Proyecto aprobado.' : 'Proyecto no aprobado.'); }
+});
+document.addEventListener('change', ev => { if (ev.target.id === 'c-tipo') document.getElementById('caja-evidencia').hidden = ev.target.value !== 'ambiental'; });
+addEventListener('hashchange', () => { ui.borrador = {}; ui.errores = {}; pintar(); scrollTo(0, 0); });
+pintar();
+</script>
+</body>
+</html>
