@@ -249,4 +249,3 @@ escribe solo `->name('registro')`.
 Se copia `packages/itca/horas-sociales` a su proyecto, se instala con Composer y
 se ajusta `config/horas-sociales.php` (columna del carnet, roles y plantilla).
 Los detalles están en `packages/itca/horas-sociales/README.md`.
-
