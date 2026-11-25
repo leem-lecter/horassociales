@@ -136,4 +136,20 @@ tfoot td{font-weight:600;border-bottom:0}
 .nav span.pendiente small{font:500 10.5px var(--mono)}
 .quien form{margin:0}
 @media (max-width:860px){.nav span.pendiente{flex:0 0 auto;border:1px dashed var(--linea)}}
+
+/* M4 · Registro diario */
+[hidden]{display:none !important}
+.pestanas a{border:1px solid var(--linea);border-radius:99px;padding:5px 12px;font-weight:500;text-decoration:none;color:var(--tinta)}
+.pestanas a:hover{background:var(--papel)}
+.pestanas a[aria-current="page"]{background:var(--azul);border-color:var(--azul);color:var(--sobre-azul)}
+td form{margin:0}
+input[type=file]{padding:6px}
+input[type=file].con-error{border-color:var(--mal)}
+.dias-no-habiles{font-size:13px}
+.dias-no-habiles summary{cursor:pointer;color:var(--azul);font-weight:500;width:max-content}
+.dias-no-habiles p{margin-top:8px}
+.dias-no-habiles ul{margin:4px 0 0;padding-left:18px;max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.estado-acciones{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+/* En celular la columna única no debe crecer con la tabla: la tabla se desliza dentro de su hoja. */
+@media (max-width:860px){.dos{grid-template-columns:minmax(0,1fr)}}
 </style>

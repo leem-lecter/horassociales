@@ -1,7 +1,7 @@
 # Contexto del proyecto: módulo de horas sociales ITCA-FEPADE
 
 Archivo de exportación para continuar el proyecto en otro chat de Claude.
-Actualizado: 24 de noviembre de 2026. Léelo completo antes de escribir código.
+Actualizado: 25 de noviembre de 2026. Léelo completo antes de escribir código.
 
 ---
 
@@ -81,6 +81,10 @@ MySQL: hay que probarlo con MySQL en M7.
 | Campos numéricos | Teléfonos (8 cifras), año académico (4) y duración de objetivos (horas) solo aceptan números. "Tiempo estimado" queda como texto libre |
 | Horario del proyecto | Formato fijo `08:00 a 12:00`; el estudiante teclea solo números. Reloj de 12 horas en cada fila AM/PM |
 | Fechas | Aviso inmediato en pantalla si la fecha es día no hábil, además de la validación del servidor |
+| Fotos de evidencia (M4) | Privadas (disco `local`), solo las ven el dueño y el profesor. La pantalla las achica antes de enviar. Hasta 5 fotos de 2 MB |
+| Corregir un registro (M4) | No hay botón Editar: se borra y se vuelve a crear (solo si no está aprobado) |
+| Hoja · fila (M4) | Por fecha, como la hoja en papel; un día viejo registrado tarde corre las filas siguientes |
+| "Hoy" | Se calcula en hora de El Salvador (`zona_horaria`), aunque la app esté en UTC |
 
 ## 5. Estado por módulo
 
@@ -90,8 +94,8 @@ MySQL: hay que probarlo con MySQL en M7.
 | M0 · Preparación (proyecto, paquete, ingreso de prueba) | Hecho (venía de la primera versión) |
 | M1 · Base de datos (tablas, modelos, calendario, `sse:periodos`, datos de prueba) | Hecho (primera versión) |
 | M2 · Plantilla y panel "Mi avance" | Hecho (primera versión) |
-| M3 · Proyecto de trabajo (FBSSE-001) | Hecho y probado (23 y 24 nov), con los 3 ajustes de la sección 4. **Falta su commit** (ver sección 8) |
-| M4 · Registro diario (FBSSE-002) | **Siguiente** |
+| M3 · Proyecto de trabajo (FBSSE-001) | Hecho, probado y subido (commit `6a64e30`) |
+| M4 · Registro diario (FBSSE-002) | Hecho y probado en el navegador (25 nov), revisado una segunda vez, con 40 pruebas automáticas. Rama `m4-registro`: **falta su commit** y unirlo a `main` (sección 8) |
 | M5 · Finalización (FBSSE-003) y pantalla de Reglas | Pendiente |
 | M6 · Vista del profesor | Pendiente |
 | M7 · Pruebas finales con MySQL, guía de instalación y README | Pendiente |
@@ -102,8 +106,8 @@ MySQL: hay que probarlo con MySQL en M7.
 config/horas-sociales.php      Metas, % ambiental, máx. horas/día, plazo, columna del carnet, roles, plantilla
 routes/web.php                 Grupo /horas-sociales, nombres sse.*. Incluye registro.php y proyecto.php
 routes/proyecto.php            Rutas de M3 (aquí también irán finalización y reglas)
-routes/registro.php            Vacío: aquí van las rutas de M4 y la revisión del profesor
-database/migrations/           5 archivos, 7 tablas con prefijo sse_
+routes/registro.php            Rutas de M4 (aquí también irá la revisión del profesor, M6)
+database/migrations/           6 archivos, 8 tablas con prefijo sse_ (la 6.ª es de M4: fotos)
 database/migrations-prueba/    Agrega carnet y rol a users (solo con SSE_LOGIN_PRUEBA=true)
 database/seeders/              DatosDePruebaSeeder, PeriodosNoHabilesSeeder
 resources/views/
@@ -113,20 +117,25 @@ resources/views/
   partials/campo.blade.php     Campo con etiqueta y error (parámetros: tipo, opciones, numerico, ayuda, req, dis, cls)
   panel.blade.php              "Mi avance" (M2): úsala como modelo de pantalla
   proyecto.blade.php           Proyecto de trabajo (M3)
+  registro.blade.php           Registro diario (M4)
+  partials/aviso-fecha.blade.php     Aviso inmediato de fechas (R5), común a M3 y M4: sseAvisoFecha({...})
+  partials/dias-no-habiles.blade.php "Ver días no hábiles" bajo cada campo de fecha
   ingreso.blade.php, sin-perfil.blade.php
 src/
   HorasSocialesServiceProvider.php
-  Models/                      Estudiante, Proyecto, ProyectoObjetivo, ProyectoHorario, Registro, Finalizacion, PeriodoNoHabil
-  Http/Controllers/            IngresoPruebaController, PanelController, ProyectoController
-  Http/Requests/               ProyectoRequest
+  Models/                      Estudiante, Proyecto, ProyectoObjetivo, ProyectoHorario, Registro, Evidencia, Finalizacion, PeriodoNoHabil
+  Http/Controllers/            IngresoPruebaController, PanelController, ProyectoController, RegistroController
+  Http/Requests/               ProyectoRequest, RegistroRequest
   Rules/DiaHabil.php           R5: rechaza asuetos y vacaciones (reutilizable en M4)
-  Support/                     CalendarioSalvadoreno (días no hábiles por año), Resumen (cifras del panel)
+  Support/                     CalendarioSalvadoreno, Resumen (cifras del panel), Fechas (hoy en El Salvador), HojaFila
+tests/Feature/RegistroDiarioTest.php   Pruebas de M4 (php artisan test)
   Console/                     Comando sse:periodos
 ```
 
 Tablas: `sse_estudiantes`, `sse_proyectos`, `sse_proyecto_objetivos`,
-`sse_proyecto_horarios`, `sse_registros`, `sse_finalizaciones`,
-`sse_periodos_no_habiles`.
+`sse_proyecto_horarios`, `sse_registros`, `sse_registro_evidencias`,
+`sse_finalizaciones`, `sse_periodos_no_habiles`. (`sse_registros.evidencia_ruta`
+quedó sin usar: las fotos van en `sse_registro_evidencias`.)
 
 Valores fijos:
 - Estados de proyecto y finalización: `borrador`, `enviado`, `aprobado`, `rechazado`.
@@ -138,9 +147,13 @@ Piezas listas para usar:
 - `Estudiante::delUsuario($request->user())`: perfil del estudiante que inició sesión (lo crea si no existe).
 - `$proyecto->permiteRegistrarHoras()` (R1) y `$proyecto->editable()` (R10).
 - `PeriodoNoHabil::para($fecha)`: el periodo no hábil de esa fecha (el más corto si hay varios) o `null`.
+- `PeriodoNoHabil::paraPantalla()`: todos los periodos como `[nombre, inicio, fin]` para las pantallas.
+- `Fechas::hoy()` (AAAA-MM-DD en El Salvador, aunque la app esté en UTC) y `Fechas::larga($f)` ("18 de noviembre de 2026").
+- `$registro->borrable()` (R11) y `$registro->borrarConFotos()`.
 - `new \Itca\HorasSociales\Rules\DiaHabil`: regla de validación para R5.
 - `Resumen::de($estudiante)`: horas aprobadas, en revisión, faltantes y de medio ambiente.
-- `config('horas-sociales.max_horas_por_dia')`, `metas`, `porcentaje_ambiental`, `plazo_entrega_meses`.
+- `config('horas-sociales.max_horas_por_dia')`, `metas`, `porcentaje_ambiental`, `plazo_entrega_meses`,
+  `filas_por_hoja`, `zona_horaria`, `disco_evidencias` (`local`, privado), `max_fotos` (5), `max_kb_foto` (2048).
 - `Gate::allows('sse-revisar')`: verdadero si el usuario es profesor.
 
 Para que una pantalla nueva siga el diseño: el contenido va en
@@ -163,19 +176,37 @@ Para que una pantalla nueva siga el diseño: el contenido va en
 - Limitación conocida: la pantalla trabaja con el proyecto más reciente del
   estudiante. Varios proyectos (uno por institución, regla 19) necesitarían una lista.
 
-## 8. Estado de Git (24 nov, computadora de la sala)
+## 7b. Cómo funciona M4 (Registro diario)
 
-- `main` local: `c6ca026` "Unir historial de GitHub y resolver conflicto del README"
-  (unión real con `origin/main`). GitHub todavía está en `710e527` "Initial commit":
-  nada se ha subido aún.
-- M3 está en disco pero sin commit. Pasos pendientes del usuario:
+- Rutas: `sse.registro` (GET, `?pestana=general|ambiental`), `sse.registro.guardar` (POST),
+  `sse.registro.borrar` (DELETE), `sse.registro.foto` (GET, solo dueño y profesor).
+- R1 se revisa primero (en `RegistroRequest::prepareForValidation`); R3, R4, R5 y R7 en
+  `RegistroRequest`; R2 en el controlador, dentro de una transacción que bloquea al estudiante.
+- La tabla muestra los registros del proyecto actual; la suma de R2 incluye todos sus proyectos.
+- Fotos: privadas, en `sse-evidencias/{estudiante}/{registro}/` del disco `local`
+  (`storage/app/private`). La pantalla las achica a 1600 px en JPEG antes de enviarlas.
+  Si el envío pasa `post_max_size`, vuelve a la pantalla con `?error=fotos` y un aviso.
+- No hay botón Editar: un registro pendiente o no aprobado se borra y se vuelve a crear.
+- "Hoja · fila" se calcula por fecha (20 renglones por hoja); los rechazados no ocupan renglón.
+- Pruebas: `php artisan test` (42 en total, 40 de M4; `phpunit.xml` incluye la carpeta `tests` del paquete
+  y `SSE_LOGIN_PRUEBA=true`).
+
+## 8. Estado de Git (25 nov)
+
+- `main`: `6a64e30` "M3: proyecto de trabajo", ya subido a GitHub.
+- M4 está en la rama `m4-registro`, sin commit hasta probarlo en el navegador. Después:
   ```bash
-  git add packages/ docs/CONTEXTO-PARA-CLAUDE.md
-  git commit -m "M3: proyecto de trabajo"
-  git push origin main
+  git add packages/ phpunit.xml docs/CONTEXTO-PARA-CLAUDE.md
+  git commit -m "M4: registro diario"
+  git push -u origin m4-registro
+  git checkout main && git merge m4-registro && git push origin main
   ```
 - Si `composer update` modifica `composer.lock` solo por el nombre de la rama,
   se descarta con `git restore composer.lock`.
+- `storage/app/claude-copia.tgz` (vacío) lo dejó Claude al copiar el proyecto; está fuera de Git y se puede borrar.
+- En `sse-host` hay dos carpetas sueltas fuera de Git: `Claude outputs/` (el zip de M4) y
+  `modulo-horas-sociales/` (copia vieja del módulo). No usar `git add .` mientras existan;
+  se pueden borrar.
 
 ## 9. Problemas conocidos y su solución
 
@@ -189,36 +220,24 @@ Para que una pantalla nueva siga el diseño: el contenido va en
 
 ## 10. Qué sigue
 
-**M4 · Registro diario (FBSSE-002)**: formulario con fotos de evidencia,
-pestañas "Control general" y "Medio ambiente (20 %)", columna "Hoja · fila"
-(20 filas por hoja de papel) y eliminar registros no aprobados. Rutas en
-`routes/registro.php` con nombre `registro` (se activa sola en el menú).
-Reglas:
-- R1 sin proyecto aprobado no se registran horas
-- R2 máximo 8 horas por día, sumando todos los registros no rechazados del estudiante en esa fecha (entre todos sus proyectos)
-- R3 solo horas enteras de 1 a 8
-- R4 fecha no futura ni anterior al inicio del proyecto
-- R5 no en días no hábiles (usar `DiaHabil` y el mismo aviso inmediato que M3)
-- R7 los de medio ambiente piden fotos (disco `config('horas-sociales.disco_evidencias')`)
-- R11 un registro aprobado no se edita ni se borra
-
-Con pruebas automáticas. Terminado cuando cada regla rechaza su caso con un mensaje claro y acepta el válido.
-
-Idea del usuario para incluir: un lugar donde el estudiante vea las fechas
-feriadas del año para no adivinar. Plan: enlace "Ver días no hábiles" junto a
-cada campo de fecha y la pantalla de Reglas de M5 con el calendario del año.
-
 **M5** Finalización (R8 la fecha de fin coincide con el último día registrado;
-R9 aviso de la fecha límite, 6 meses después) y pantalla de Reglas.
+R9 aviso de la fecha límite, 6 meses después) y pantalla de Reglas con el calendario
+de días no hábiles del año (el enlace "Ver días no hábiles" ya existe en M3 y M4).
+Pendiente de decidir en su pre-coding: una vez enviada la hoja de finalización, M4
+todavía deja agregar o borrar registros, y eso puede mover el "último día registrado" (R8).
 **M6** Vista del profesor (`sse.revision`): aprobar o rechazar proyectos, horas
-y finalizaciones con comentario; tabla de avance por estudiante (R12).
+y finalizaciones con comentario; tabla de avance por estudiante (R12). El profesor
+ya puede abrir las fotos con `sse.registro.foto`.
 **M7** Recorrido completo con MySQL, revisión en celular, guía de instalación
 para el profesor y README.
+
+Antes de cada módulo se hace su pre-coding (sección nueva en el documento de
+pre-coding), se confirman las decisiones y después se programa.
 
 ## 11. Mensaje para abrir el chat nuevo
 
 ```
-Vamos a continuar el proyecto de horas sociales con el M4 · Registro diario.
+Vamos a continuar el proyecto de horas sociales con el M5 · Finalización y Reglas.
 Lee primero el archivo de contexto: sse-host/docs/CONTEXTO-PARA-CLAUDE.md
 y el pre-coding: https://claude.ai/artifact/7b3B7f4BKwuwZg9887mLoP
 El proyecto está en C:\Users\eemma\Documents\Horas sociales proyecto\sse-host

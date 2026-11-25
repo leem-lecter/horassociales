@@ -43,9 +43,21 @@ return [
     'porcentaje_ambiental' => 20,   // regla 21
     'max_horas_por_dia' => 8,       // regla 16
     'plazo_entrega_meses' => 6,     // regla 18
+    'filas_por_hoja' => 20,         // renglones de la hoja FBSSE-002 en papel
 
-    // Disco donde se guardan las fotos de evidencia de medio ambiente.
-    'disco_evidencias' => env('SSE_DISCO_EVIDENCIAS', 'public'),
+    // "Hoy" se calcula en esta zona horaria, aunque la aplicación esté en UTC (R4).
+    'zona_horaria' => env('SSE_ZONA_HORARIA', 'America/El_Salvador'),
+
+    /*
+    | Fotos de evidencia de medio ambiente (R7)
+    | 'local' es privado: las fotos solo se ven por la ruta del módulo, y solo
+    | las abren el estudiante dueño y el profesor.
+    | La pantalla reduce cada foto a 1600 px antes de enviarla, así cabe en el
+    | límite de PHP (upload_max_filesize = 2M, post_max_size = 8M por defecto).
+    */
+    'disco_evidencias' => env('SSE_DISCO_EVIDENCIAS', 'local'),
+    'max_fotos' => 5,          // por registro
+    'max_kb_foto' => 2048,     // 2 MB por foto
 
     /*
     | Solo para el proyecto de pruebas

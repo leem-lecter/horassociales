@@ -3,7 +3,10 @@
 namespace Itca\HorasSociales;
 
 use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Itca\HorasSociales\Console\GenerarPeriodosNoHabiles;
 
@@ -40,6 +43,22 @@ class HorasSocialesServiceProvider extends ServiceProvider
                 return in_array($rol, config('horas-sociales.roles_profesor'), true);
             });
         }
+
+        // Si el envío del registro diario pesa más de lo que acepta PHP (post_max_size),
+        // Laravel lo corta antes de llegar al módulo. En vez de la página de error,
+        // vuelve al registro con un aviso. (La sesión aún no existe en ese punto,
+        // por eso el aviso va en la dirección: ?error=fotos.)
+        $this->callAfterResolving(ExceptionHandler::class, function ($handler) {
+            if (! method_exists($handler, 'renderable')) {
+                return;
+            }
+            $handler->renderable(function (PostTooLargeException $e, $request) {
+                $prefijo = trim(config('horas-sociales.prefijo'), '/');
+                if ($request->is($prefijo.'/registro') && Route::has('sse.registro')) {
+                    return redirect()->route('sse.registro', ['pestana' => 'ambiental', 'error' => 'fotos']);
+                }
+            });
+        });
 
         if ($this->app->runningInConsole()) {
             $this->commands([GenerarPeriodosNoHabiles::class]);

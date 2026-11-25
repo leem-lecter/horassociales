@@ -42,4 +42,17 @@ class PeriodoNoHabil extends Model
             ->sortBy(fn (self $p) => $p->fecha_inicio->diffInDays($p->fecha_fin))
             ->first();
     }
+
+    /**
+     * Todos los periodos como [nombre, inicio, fin] (AAAA-MM-DD), para el aviso inmediato
+     * de las pantallas (R5) y la lista "Ver días no hábiles".
+     *
+     * @return array<int, array{0: string, 1: string, 2: string}>
+     */
+    public static function paraPantalla(): array
+    {
+        return static::orderBy('fecha_inicio')->get()
+            ->map(fn (self $p) => [$p->nombre, $p->fecha_inicio->format('Y-m-d'), $p->fecha_fin->format('Y-m-d')])
+            ->all();
+    }
 }

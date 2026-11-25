@@ -91,7 +91,13 @@
             @include('horas-sociales::partials.campo', ['name' => 'supervisor_correo', 'label' => 'Correo de la persona responsable', 'valor' => $p?->supervisor_correo, 'tipo' => 'email'] + $o)
             @include('horas-sociales::partials.campo', ['name' => 'supervisor_telefono', 'label' => 'Teléfono de contacto', 'valor' => $p?->supervisor_telefono, 'numerico' => 8, 'ayuda' => '8 dígitos, sin guion'] + $o)
             @include('horas-sociales::partials.campo', ['name' => 'tiempo_estimado', 'label' => 'Tiempo estimado de las actividades', 'valor' => $p?->tiempo_estimado, 'ayuda' => 'Por ejemplo: 5 meses'] + $o)
-            @include('horas-sociales::partials.campo', ['name' => 'fecha_inicio', 'label' => 'Fecha de inicio del servicio social', 'valor' => $p?->fecha_inicio, 'tipo' => 'date', 'ayuda' => 'No puede ser asueto ni vacaciones.'] + $o)
+            <div class="pila" style="gap:6px">
+                @include('horas-sociales::partials.campo', ['name' => 'fecha_inicio', 'label' => 'Fecha de inicio del servicio social', 'valor' => $p?->fecha_inicio, 'tipo' => 'date', 'ayuda' => 'No puede ser asueto ni vacaciones.'] + $o)
+                @if ($editable)
+                    @php $anioHoy = (int) substr(\Itca\HorasSociales\Support\Fechas::hoy(), 0, 4); @endphp
+                    @include('horas-sociales::partials.dias-no-habiles', ['periodos' => $periodos, 'anios' => [$anioHoy, $anioHoy + 1]])
+                @endif
+            </div>
         </div>
     </section>
 
@@ -203,53 +209,22 @@
     @endif
 
     @if ($editable)
+        @include('horas-sociales::partials.aviso-fecha')
         <script>
             // Fecha de inicio: avisa al momento si cae en asueto o vacaciones (R5),
             // con el mismo mensaje que da el servidor al enviar.
             (function () {
-                var periodos = @json($periodos);
                 var primeraHora = @json($primeraHora ? substr($primeraHora, 0, 10) : null);
-                var campo = document.getElementById('c-fecha_inicio');
-                if (! campo) return;
-                var aviso = campo.parentNode.querySelector('small');
-                if (! aviso) {
-                    aviso = document.createElement('small');
-                    campo.parentNode.appendChild(aviso);
-                }
-                var ayuda = aviso.classList.contains('error') ? 'No puede ser asueto ni vacaciones.' : aviso.textContent;
-                aviso.setAttribute('aria-live', 'polite');
-
-                function largo(fecha) {
-                    var p = fecha.split('-');
-                    return new Date(+p[0], p[1] - 1, +p[2]).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' });
-                }
-                function revisar() {
-                    var f = campo.value;   // AAAA-MM-DD
-                    var problema = '';
-                    if (f) {
-                        // Si cae en varios periodos, se nombra el más corto (Viernes Santo antes que Semana Santa)
-                        var hallado = null;
-                        periodos.forEach(function (p) {
-                            var dura = function (x) { return Date.parse(x[2]) - Date.parse(x[1]); };
-                            if (p[1] <= f && f <= p[2] && (! hallado || dura(p) < dura(hallado))) {
-                                hallado = p;
-                            }
-                        });
-                        if (hallado) {
-                            problema = 'El ' + largo(f) + ' es día no hábil (' + hallado[0] + '). Elige otra fecha.';
-                        } else if (primeraHora && f > primeraHora) {
-                            problema = 'Ya tienes horas registradas desde el ' + largo(primeraHora) + '. La fecha de inicio no puede ser posterior.';
-                        }
-                    }
-                    campo.setCustomValidity(problema);
-                    campo.classList.toggle('con-error', !! problema);
-                    aviso.classList.toggle('error', !! problema);
-                    aviso.style.color = problema ? '' : (f ? 'var(--ok)' : '');
-                    aviso.textContent = problema || (f ? 'Fecha permitida: es día hábil.' : ayuda);
-                }
-                campo.addEventListener('input', revisar);
-                campo.addEventListener('change', revisar);
-                if (campo.value && ! aviso.classList.contains('error')) revisar();
+                sseAvisoFecha({
+                    campo: document.getElementById('c-fecha_inicio'),
+                    periodos: @json($periodos),
+                    ayuda: 'No puede ser asueto ni vacaciones.',
+                    despues: function (f) {
+                        return primeraHora && f > primeraHora
+                            ? 'Ya tienes horas registradas desde el ' + sseAvisoFecha.largo(primeraHora) + '. La fecha de inicio no puede ser posterior.'
+                            : '';
+                    },
+                });
             })();
 
             // Campos de solo números (teléfonos, año, duración): se borra al instante cualquier letra o símbolo.

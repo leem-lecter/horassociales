@@ -40,9 +40,7 @@ class ProyectoController extends Controller
             'horario' => $horario,
             'editable' => ! $proyecto || $proyecto->editable(),
             // Para avisar al instante si la fecha de inicio cae en día no hábil (R5): [nombre, inicio, fin]
-            'periodos' => PeriodoNoHabil::orderBy('fecha_inicio')->get()
-                ->map(fn ($p) => [$p->nombre, $p->fecha_inicio->format('Y-m-d'), $p->fecha_fin->format('Y-m-d')])
-                ->all(),
+            'periodos' => PeriodoNoHabil::paraPantalla(),
             // Primer día con horas registradas: la fecha de inicio no puede quedar después
             'primeraHora' => $proyecto?->registros()->where('estado', '!=', Registro::RECHAZADO)->min('fecha'),
         ]);
