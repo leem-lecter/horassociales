@@ -95,8 +95,8 @@ MySQL: hay que probarlo con MySQL en M7.
 | M1 · Base de datos (tablas, modelos, calendario, `sse:periodos`, datos de prueba) | Hecho (primera versión) |
 | M2 · Plantilla y panel "Mi avance" | Hecho (primera versión) |
 | M3 · Proyecto de trabajo (FBSSE-001) | Hecho, probado y subido (commit `6a64e30`) |
-| M4 · Registro diario (FBSSE-002) | Hecho y probado en el navegador (25 nov), revisado una segunda vez, con 40 pruebas automáticas. Rama `m4-registro`: **falta su commit** y unirlo a `main` (sección 8) |
-| M5 · Finalización (FBSSE-003) y pantalla de Reglas | Pendiente |
+| M4 · Registro diario (FBSSE-002) | Hecho, probado en el navegador y revisado una segunda vez (25 nov), con 40 pruebas automáticas. Subido a `main` (commit `d6f5f9c`) |
+| M5 · Finalización (FBSSE-003) y pantalla de Reglas | **Siguiente** |
 | M6 · Vista del profesor | Pendiente |
 | M7 · Pruebas finales con MySQL, guía de instalación y README | Pendiente |
 
@@ -193,14 +193,8 @@ Para que una pantalla nueva siga el diseño: el contenido va en
 
 ## 8. Estado de Git (25 nov)
 
-- `main`: `6a64e30` "M3: proyecto de trabajo", ya subido a GitHub.
-- M4 está en la rama `m4-registro`, sin commit hasta probarlo en el navegador. Después:
-  ```bash
-  git add packages/ phpunit.xml docs/CONTEXTO-PARA-CLAUDE.md
-  git commit -m "M4: registro diario"
-  git push -u origin m4-registro
-  git checkout main && git merge m4-registro && git push origin main
-  ```
+- `main`: `d6f5f9c` "M4: registro diario", ya subido a GitHub (M3 y M4 completos).
+- Para M5: `git checkout -b m5-finalizacion` antes de empezar.
 - Si `composer update` modifica `composer.lock` solo por el nombre de la rama,
   se descarta con `git restore composer.lock`.
 - `storage/app/claude-copia.tgz` (vacío) lo dejó Claude al copiar el proyecto; está fuera de Git y se puede borrar.
