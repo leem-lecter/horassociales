@@ -36,7 +36,9 @@
     @if ($envioMuyPesado)
         <p class="nota mal" role="alert"><b>Las fotos pesaban demasiado y el registro no se guardó.</b> Vuelve a intentarlo con menos fotos o con fotos más livianas.</p>
     @endif
-    @if (! $activo)
+    @if ($cerrado)
+        <p class="nota aviso"><b>Tu registro de horas quedó cerrado.</b> Ya enviaste tu <a href="{{ route('sse.finalizacion') }}">hoja de finalización</a>: no se agregan ni se borran registros de este proyecto. Si el coordinador te la devuelve, se abre otra vez.</p>
+    @elseif (! $activo)
         <p class="nota aviso"><b>Aún no puedes registrar horas.</b> Primero el coordinador debe aprobar tu <a href="{{ route('sse.proyecto') }}">proyecto de trabajo</a>.</p>
     @elseif ($errors->has('proyecto'))
         <p class="nota mal" role="alert">{{ $errors->first('proyecto') }}</p>
@@ -120,7 +122,7 @@
                             <td>
                                 <div class="estado-acciones">
                                     <span class="pastilla {{ $estados[$r->estado][0] }}">{{ $estados[$r->estado][1] }}</span>
-                                    @if ($r->borrable())
+                                    @if ($r->borrable() && ! $cerrado)
                                         <form method="POST" action="{{ route('sse.registro.borrar', $r) }}"
                                               data-confirmar="¿Eliminar el registro del {{ $fecha($r->fecha) }}?{{ $r->evidencias->isNotEmpty() ? ' También se borran sus fotos.' : '' }}">
                                             @csrf

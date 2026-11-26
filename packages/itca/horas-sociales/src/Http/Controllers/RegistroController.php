@@ -22,6 +22,7 @@ use Itca\HorasSociales\Support\Resumen;
  * Registro diario (FBSSE-002).
  * El estudiante anota cada día de servicio social; queda "pendiente" hasta que el
  * profesor lo revisa (M6). Los registros no aprobados se pueden borrar (R11).
+ * Con la hoja de finalización enviada, el registro del proyecto queda cerrado (R13).
  */
 class RegistroController extends Controller
 {
@@ -42,11 +43,14 @@ class RegistroController extends Controller
 
         $hoy = Fechas::hoy();
         $inicio = $proyecto?->fecha_inicio?->format('Y-m-d');
+        // R13: con la hoja de finalización enviada o aprobada, el registro queda cerrado.
+        $cerrado = (bool) $proyecto?->registroCerrado();
 
         return view('horas-sociales::registro', [
             'estudiante' => $estudiante,
             'proyecto' => $proyecto,
-            'activo' => (bool) $proyecto?->permiteRegistrarHoras(),
+            'activo' => ! $cerrado && (bool) $proyecto?->permiteRegistrarHoras(),
+            'cerrado' => $cerrado,
             'pestana' => $pestana,
             'registros' => $registros,
             'hojaFila' => HojaFila::para($registros),
@@ -79,6 +83,11 @@ class RegistroController extends Controller
             DB::transaction(function () use ($estudiante, $proyecto, $datos, $fotos, $disco, &$carpeta) {
                 // Bloquea al estudiante mientras suma: dos envíos seguidos no pasan juntos el límite.
                 Estudiante::whereKey($estudiante->id)->lockForUpdate()->first();
+
+                // R13 otra vez, ya con el bloqueo: la hoja de finalización pudo enviarse en este instante.
+                if ($proyecto->registroCerrado()) {
+                    throw ValidationException::withMessages(['proyecto' => RegistroRequest::MENSAJE_R13]);
+                }
 
                 // R2: máximo 8 horas por día, entre todos sus proyectos y sin contar los rechazados.
                 $max = (int) config('horas-sociales.max_horas_por_dia');
@@ -140,6 +149,11 @@ class RegistroController extends Controller
 
         if (! $registro->borrable()) {
             return $volver->with('sse_error', 'Este registro ya fue aprobado y no se puede borrar.');
+        }
+
+        // R13: con la hoja de finalización enviada, borrar movería la fecha de finalización (R8).
+        if ($registro->proyecto?->registroCerrado()) {
+            return $volver->with('sse_error', 'Ya enviaste tu hoja de finalización: los registros de este proyecto ya no se pueden borrar.');
         }
 
         $registro->borrarConFotos();

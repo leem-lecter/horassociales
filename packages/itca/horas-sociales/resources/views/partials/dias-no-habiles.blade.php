@@ -2,7 +2,7 @@
     "Ver días no hábiles": lista desplegable de asuetos y vacaciones, debajo de cada campo de fecha.
     Uso: @include('horas-sociales::partials.dias-no-habiles', ['periodos' => $periodos, 'anios' => [2026, 2027]])
     periodos: [nombre, inicio, fin] en AAAA-MM-DD (PeriodoNoHabil::paraPantalla()).
-    La pantalla de Reglas (M5) tendrá el calendario completo.
+    Al final enlaza a la pantalla de Reglas, que tiene el calendario completo.
 --}}
 @php
     // Se agrega el año solo si es distinto al del título (vacaciones de fin de año).
@@ -26,4 +26,7 @@
             </ul>
         @endif
     @endforeach
+    @if (\Illuminate\Support\Facades\Route::has('sse.reglas'))
+        <p><a href="{{ route('sse.reglas') }}">Ver el calendario completo en Reglas</a></p>
+    @endif
 </details>

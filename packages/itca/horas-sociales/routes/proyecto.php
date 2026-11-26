@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Itca\HorasSociales\Http\Controllers\FinalizacionController;
 use Itca\HorasSociales\Http\Controllers\ProyectoController;
+use Itca\HorasSociales\Http\Controllers\ReglasController;
 
 /*
 | RUTAS DE LA PERSONA B
@@ -19,3 +21,8 @@ use Itca\HorasSociales\Http\Controllers\ProyectoController;
 Route::get('proyecto', [ProyectoController::class, 'editar'])->name('proyecto');
 Route::post('proyecto', [ProyectoController::class, 'guardar'])->name('proyecto.guardar');
 Route::post('proyecto/reabrir', [ProyectoController::class, 'reabrir'])->name('proyecto.reabrir');
+
+// M5 · Finalización (FBSSE-003) y Reglas
+Route::get('finalizacion', [FinalizacionController::class, 'editar'])->name('finalizacion');
+Route::post('finalizacion', [FinalizacionController::class, 'guardar'])->name('finalizacion.guardar');
+Route::get('reglas', [ReglasController::class, 'index'])->name('reglas');

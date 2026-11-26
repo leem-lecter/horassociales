@@ -146,6 +146,7 @@ td form{margin:0}
 input[type=file]{padding:6px}
 input[type=file].con-error{border-color:var(--mal)}
 .dias-no-habiles{font-size:13px}
+.anio-reglas summary{cursor:pointer;font-weight:600;width:max-content}
 .dias-no-habiles summary{cursor:pointer;color:var(--azul);font-weight:500;width:max-content}
 .dias-no-habiles p{margin-top:8px}
 .dias-no-habiles ul{margin:4px 0 0;padding-left:18px;max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:2px}

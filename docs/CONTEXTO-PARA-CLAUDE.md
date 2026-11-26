@@ -1,7 +1,7 @@
 # Contexto del proyecto: módulo de horas sociales ITCA-FEPADE
 
 Archivo de exportación para continuar el proyecto en otro chat de Claude.
-Actualizado: 25 de noviembre de 2026. Léelo completo antes de escribir código.
+Actualizado: 25 de noviembre de 2026 (tras M5). Léelo completo antes de escribir código.
 
 ---
 
@@ -77,6 +77,8 @@ MySQL: hay que probarlo con MySQL en M7.
 | Firmas y sellos | Fuera del módulo: siguen a mano en papel |
 | Carta de solicitud (FBSSE-004) | Fuera del módulo |
 | Dispositivos | Pensado para computadora, usable en celular |
+| Cierre del registro (R13, M5) | Con la hoja de finalización enviada o aprobada no se agregan ni se borran registros. Se abre otra vez si el profesor la devuelve (`rechazado`) |
+| Hoja de finalización (M5) | Fecha de fin rellena con el último registro no rechazado; se rechaza si no coincide (R8). Horas en revisión: solo aviso. El estudiante no la reabre; solo el profesor al devolverla. Se finaliza el proyecto más reciente |
 | Carnet en el formulario | **Bloqueado** para el estudiante, también al editar. Es la llave que une la cuenta con sus horas: si cambiara, el módulo no encontraría su perfil. Si hay que corregirlo, lo hace el profesor |
 | Campos numéricos | Teléfonos (8 cifras), año académico (4) y duración de objetivos (horas) solo aceptan números. "Tiempo estimado" queda como texto libre |
 | Horario del proyecto | Formato fijo `08:00 a 12:00`; el estudiante teclea solo números. Reloj de 12 horas en cada fila AM/PM |
@@ -96,8 +98,8 @@ MySQL: hay que probarlo con MySQL en M7.
 | M2 · Plantilla y panel "Mi avance" | Hecho (primera versión) |
 | M3 · Proyecto de trabajo (FBSSE-001) | Hecho, probado y subido (commit `6a64e30`) |
 | M4 · Registro diario (FBSSE-002) | Hecho, probado en el navegador y revisado una segunda vez (25 nov), con 40 pruebas automáticas. Subido a `main` (commit `d6f5f9c`) |
-| M5 · Finalización (FBSSE-003) y pantalla de Reglas | **Siguiente** |
-| M6 · Vista del profesor | Pendiente |
+| M5 · Finalización (FBSSE-003) y pantalla de Reglas | Hecho y probado en el navegador (25 nov), rama `m5-finalizacion`. 69 pruebas en total |
+| M6 · Vista del profesor | **Siguiente** |
 | M7 · Pruebas finales con MySQL, guía de instalación y README | Pendiente |
 
 ## 6. Qué hay en el módulo (`packages/itca/horas-sociales/`)
@@ -105,7 +107,7 @@ MySQL: hay que probarlo con MySQL en M7.
 ```
 config/horas-sociales.php      Metas, % ambiental, máx. horas/día, plazo, columna del carnet, roles, plantilla
 routes/web.php                 Grupo /horas-sociales, nombres sse.*. Incluye registro.php y proyecto.php
-routes/proyecto.php            Rutas de M3 (aquí también irán finalización y reglas)
+routes/proyecto.php            Rutas de M3 y M5 (proyecto, finalización y reglas)
 routes/registro.php            Rutas de M4 (aquí también irá la revisión del profesor, M6)
 database/migrations/           6 archivos, 8 tablas con prefijo sse_ (la 6.ª es de M4: fotos)
 database/migrations-prueba/    Agrega carnet y rol a users (solo con SSE_LOGIN_PRUEBA=true)
@@ -118,17 +120,20 @@ resources/views/
   panel.blade.php              "Mi avance" (M2): úsala como modelo de pantalla
   proyecto.blade.php           Proyecto de trabajo (M3)
   registro.blade.php           Registro diario (M4)
+  finalizacion.blade.php       Hoja de finalización (M5)
+  reglas.blade.php             Reglas y calendario de días no hábiles (M5)
   partials/aviso-fecha.blade.php     Aviso inmediato de fechas (R5), común a M3 y M4: sseAvisoFecha({...})
   partials/dias-no-habiles.blade.php "Ver días no hábiles" bajo cada campo de fecha
   ingreso.blade.php, sin-perfil.blade.php
 src/
   HorasSocialesServiceProvider.php
   Models/                      Estudiante, Proyecto, ProyectoObjetivo, ProyectoHorario, Registro, Evidencia, Finalizacion, PeriodoNoHabil
-  Http/Controllers/            IngresoPruebaController, PanelController, ProyectoController, RegistroController
-  Http/Requests/               ProyectoRequest, RegistroRequest
+  Http/Controllers/            IngresoPruebaController, PanelController, ProyectoController, RegistroController, FinalizacionController, ReglasController
+  Http/Requests/               ProyectoRequest, RegistroRequest, FinalizacionRequest
   Rules/DiaHabil.php           R5: rechaza asuetos y vacaciones (reutilizable en M4)
   Support/                     CalendarioSalvadoreno, Resumen (cifras del panel), Fechas (hoy en El Salvador), HojaFila
 tests/Feature/RegistroDiarioTest.php   Pruebas de M4 (php artisan test)
+tests/Feature/FinalizacionTest.php     Pruebas de M5
   Console/                     Comando sse:periodos
 ```
 
@@ -150,6 +155,8 @@ Piezas listas para usar:
 - `PeriodoNoHabil::paraPantalla()`: todos los periodos como `[nombre, inicio, fin]` para las pantallas.
 - `Fechas::hoy()` (AAAA-MM-DD en El Salvador, aunque la app esté en UTC) y `Fechas::larga($f)` ("18 de noviembre de 2026").
 - `$registro->borrable()` (R11) y `$registro->borrarConFotos()`.
+- `$proyecto->registroCerrado()` (R13) y `$proyecto->ultimoDiaRegistrado()` (R8, AAAA-MM-DD o null).
+- `$finalizacion->editable()`, `$finalizacion->fechaLimiteEntrega()` y `Finalizacion::limitePara($fecha)` (R9, +6 meses sin desborde).
 - `new \Itca\HorasSociales\Rules\DiaHabil`: regla de validación para R5.
 - `Resumen::de($estudiante)`: horas aprobadas, en revisión, faltantes y de medio ambiente.
 - `config('horas-sociales.max_horas_por_dia')`, `metas`, `porcentaje_ambiental`, `plazo_entrega_meses`,
@@ -191,10 +198,22 @@ Para que una pantalla nueva siga el diseño: el contenido va en
 - Pruebas: `php artisan test` (42 en total, 40 de M4; `phpunit.xml` incluye la carpeta `tests` del paquete
   y `SSE_LOGIN_PRUEBA=true`).
 
+## 7c. Cómo funciona M5 (Finalización y Reglas)
+
+- Rutas: `sse.finalizacion` (GET), `sse.finalizacion.guardar` (POST con `accion=borrador|enviar`), `sse.reglas` (GET, estudiante y profesor).
+- R1 en `FinalizacionRequest::prepareForValidation`; R8 en el controlador, dentro de una transacción que bloquea al estudiante (el mismo bloqueo que R2).
+- R13 en `RegistroRequest` (antes de validar), otra vez dentro de la transacción de `RegistroController::guardar`, y en `borrar`.
+- La pantalla avisa al momento si la fecha de fin no coincide y recalcula la fecha límite.
+- Para M6: al devolver la hoja, poner `estado = rechazado` y `comentario_coordinador`; eso reabre el registro diario.
+- Hueco conocido: "Editar y volver a enviar" del proyecto (M3) todavía funciona con la hoja de finalización enviada. Se arregla en el chat de M3 con un control en `ProyectoController::reabrir`.
+- Para devolver la hoja en pruebas (mientras no exista M6):
+  `php artisan tinker --execute="Itca\HorasSociales\Models\Finalizacion::query()->update(['estado' => 'rechazado']);"`
+
 ## 8. Estado de Git (25 nov)
 
 - `main`: `d6f5f9c` "M4: registro diario", ya subido a GitHub (M3 y M4 completos).
-- Para M5: `git checkout -b m5-finalizacion` antes de empezar.
+- M5 en la rama `m5-finalizacion`; se une a `main` después de probarlo.
+- Para M6: desde `main` actualizado, `git checkout -b m6-profesor`.
 - Si `composer update` modifica `composer.lock` solo por el nombre de la rama,
   se descarta con `git restore composer.lock`.
 - `storage/app/claude-copia.tgz` (vacío) lo dejó Claude al copiar el proyecto; está fuera de Git y se puede borrar.
@@ -214,11 +233,6 @@ Para que una pantalla nueva siga el diseño: el contenido va en
 
 ## 10. Qué sigue
 
-**M5** Finalización (R8 la fecha de fin coincide con el último día registrado;
-R9 aviso de la fecha límite, 6 meses después) y pantalla de Reglas con el calendario
-de días no hábiles del año (el enlace "Ver días no hábiles" ya existe en M3 y M4).
-Pendiente de decidir en su pre-coding: una vez enviada la hoja de finalización, M4
-todavía deja agregar o borrar registros, y eso puede mover el "último día registrado" (R8).
 **M6** Vista del profesor (`sse.revision`): aprobar o rechazar proyectos, horas
 y finalizaciones con comentario; tabla de avance por estudiante (R12). El profesor
 ya puede abrir las fotos con `sse.registro.foto`.
@@ -231,7 +245,7 @@ pre-coding), se confirman las decisiones y después se programa.
 ## 11. Mensaje para abrir el chat nuevo
 
 ```
-Vamos a continuar el proyecto de horas sociales con el M5 · Finalización y Reglas.
+Vamos a continuar el proyecto de horas sociales con el M6 · Vista del profesor.
 Lee primero el archivo de contexto: sse-host/docs/CONTEXTO-PARA-CLAUDE.md
 y el pre-coding: https://claude.ai/artifact/7b3B7f4BKwuwZg9887mLoP
 El proyecto está en C:\Users\eemma\Documents\Horas sociales proyecto\sse-host

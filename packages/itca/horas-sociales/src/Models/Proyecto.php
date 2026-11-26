@@ -60,6 +60,26 @@ class Proyecto extends Model
         return $this->estado === self::APROBADO;
     }
 
+    /**
+     * R13: con la hoja de finalización enviada o aprobada ya no se agregan ni se borran
+     * registros, para que la fecha de finalización (R8) no cambie. Consulta la base de
+     * datos cada vez, así sirve también dentro de una transacción.
+     */
+    public function registroCerrado(): bool
+    {
+        return $this->finalizacion()
+            ->whereIn('estado', [Finalizacion::ENVIADO, Finalizacion::APROBADO])
+            ->exists();
+    }
+
+    /** R8: fecha (AAAA-MM-DD) del último registro que cuenta, o null si no hay ninguno. */
+    public function ultimoDiaRegistrado(): ?string
+    {
+        $fecha = $this->registros()->vigentes()->max('fecha');
+
+        return $fecha ? substr((string) $fecha, 0, 10) : null;
+    }
+
     /** Mientras está enviado o aprobado, el estudiante no lo puede editar. */
     public function editable(): bool
     {

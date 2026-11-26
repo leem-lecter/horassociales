@@ -17,7 +17,7 @@ use Itca\HorasSociales\Support\Fechas;
  * Validación del registro diario (FBSSE-002).
  *
  * Orden de las revisiones:
- *   R1 (proyecto aprobado) antes que todo, en prepareForValidation().
+ *   R1 (proyecto aprobado) y R13 (finalización no enviada) antes que todo, en prepareForValidation().
  *   R3, R4, R5 y R7 aquí, en rules().
  *   R2 (máximo 8 horas por día) en el controlador, dentro de la transacción que guarda,
  *   para que dos envíos al mismo tiempo no pasen juntos el límite.
@@ -25,6 +25,8 @@ use Itca\HorasSociales\Support\Fechas;
 class RegistroRequest extends FormRequest
 {
     public const MENSAJE_R1 = 'Aún no puedes registrar horas: primero el coordinador debe aprobar tu proyecto de trabajo.';
+
+    public const MENSAJE_R13 = 'Ya enviaste tu hoja de finalización: el registro de horas de este proyecto quedó cerrado.';
 
     private ?Estudiante $estudiante = null;
 
@@ -58,6 +60,11 @@ class RegistroRequest extends FormRequest
         // R1: sin proyecto aprobado no se registran horas.
         if (! $this->proyecto()?->permiteRegistrarHoras()) {
             throw ValidationException::withMessages(['proyecto' => self::MENSAJE_R1]);
+        }
+
+        // R13: con la hoja de finalización enviada o aprobada no se agregan registros.
+        if ($this->proyecto()->registroCerrado()) {
+            throw ValidationException::withMessages(['proyecto' => self::MENSAJE_R13]);
         }
 
         if (is_string($this->input('horas'))) {
