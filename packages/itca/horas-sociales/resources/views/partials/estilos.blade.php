@@ -153,4 +153,18 @@ input[type=file].con-error{border-color:var(--mal)}
 .estado-acciones{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 /* En celular la columna única no debe crecer con la tabla: la tabla se desliza dentro de su hoja. */
 @media (max-width:860px){.dos{grid-template-columns:minmax(0,1fr)}}
+/* M6 · Vista del profesor */
+.resolver{display:flex;flex-direction:column;gap:6px;min-width:210px;max-width:320px;margin:0}
+.resolver input{min-height:32px;padding:5px 9px;font-size:13px}
+.resolver .error-resolver{color:var(--mal);font-size:12px;font-weight:500}
+.revision-item{justify-content:space-between;align-items:flex-start;padding:12px 0;border-top:1px solid var(--linea)}
+.revision-item:first-of-type{border-top:0;padding-top:0}
+.datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;margin:0}
+.datos div{min-width:0}
+.datos dt{font-size:12px;font-weight:600;color:var(--gris)}
+.datos dd{margin:0;overflow-wrap:anywhere}
+.hoja h3{margin:18px 0 8px}
+.buscar{max-width:420px}
+.buscar input{min-height:34px}
+.paginas{justify-content:space-between;margin-top:12px;font-size:14px}
 </style>

@@ -401,9 +401,9 @@ class RegistroDiarioTest extends TestCase
 
     public function test_el_profesor_no_tiene_registro_diario(): void
     {
+        // M6: el profesor va a su pantalla de Revisión.
         $this->actingAs($this->crearUsuario('coordinador', 'profesor'))->get(route('sse.registro'))
-            ->assertOk()
-            ->assertDontSee('Nuevo registro');
+            ->assertRedirect(route('sse.revision'));
     }
 
     /* ---------- Hoja · fila ---------- */

@@ -5,10 +5,11 @@ use Itca\HorasSociales\Http\Controllers\IngresoPruebaController;
 use Itca\HorasSociales\Http\Controllers\PanelController;
 
 /*
-| ESTE ARCHIVO NO SE EDITA.
-| Cada persona agrega sus rutas en su propio archivo, para no chocar en Git:
-|   routes/registro.php  -> Persona A (registro diario y revisión de horas)
-|   routes/proyecto.php  -> Persona B (proyecto, finalización, reglas y revisión de proyectos)
+| Rutas del módulo. Cada pantalla tiene su archivo:
+|   routes/registro.php  -> registro diario (M4)
+|   routes/proyecto.php  -> proyecto, finalización y reglas (M3 y M5)
+|   routes/revision.php  -> vista del profesor (M6)
+| 'sse.estudiante' manda al profesor a Revisión desde las pantallas del estudiante.
 */
 
 $prefijo = config('horas-sociales.prefijo');
@@ -26,8 +27,9 @@ Route::middleware(config('horas-sociales.middleware'))
     ->prefix($prefijo)
     ->name('sse.')
     ->group(function () {
-        Route::get('/', [PanelController::class, 'index'])->name('panel');
+        Route::get('/', [PanelController::class, 'index'])->middleware('sse.estudiante')->name('panel');
 
         require __DIR__.'/registro.php';
         require __DIR__.'/proyecto.php';
+        require __DIR__.'/revision.php';
     });

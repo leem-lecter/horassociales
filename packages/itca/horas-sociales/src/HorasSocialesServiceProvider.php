@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Itca\HorasSociales\Console\GenerarPeriodosNoHabiles;
+use Itca\HorasSociales\Http\Middleware\SoloEstudiante;
 
 /**
  * Punto de entrada del módulo. Laravel lo carga solo gracias a
@@ -23,6 +24,9 @@ class HorasSocialesServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Pantallas del estudiante: el profesor va a Revisión (M6).
+        $this->app['router']->aliasMiddleware('sse.estudiante', SoloEstudiante::class);
+
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'horas-sociales');
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');

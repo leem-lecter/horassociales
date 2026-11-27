@@ -1,7 +1,7 @@
 # Contexto del proyecto: módulo de horas sociales ITCA-FEPADE
 
 Archivo de exportación para continuar el proyecto en otro chat de Claude.
-Actualizado: 25 de noviembre de 2026 (tras M5). Léelo completo antes de escribir código.
+Actualizado: 26 de noviembre de 2026 (tras M6). Léelo completo antes de escribir código.
 
 ---
 
@@ -99,7 +99,7 @@ MySQL: hay que probarlo con MySQL en M7.
 | M3 · Proyecto de trabajo (FBSSE-001) | Hecho, probado y subido (commit `6a64e30`) |
 | M4 · Registro diario (FBSSE-002) | Hecho, probado en el navegador y revisado una segunda vez (25 nov), con 40 pruebas automáticas. Subido a `main` (commit `d6f5f9c`) |
 | M5 · Finalización (FBSSE-003) y pantalla de Reglas | Hecho y probado en el navegador (25 nov), rama `m5-finalizacion`. 69 pruebas en total |
-| M6 · Vista del profesor | **Siguiente** |
+| M6 · Vista del profesor | Escrito el 26 nov en la rama `m6-profesor`, con 18 pruebas nuevas (`RevisionTest`, 87 en total). Probado en el navegador por el usuario (26 nov). Es una pantalla **solo para pruebas**: el profesor aprueba y lleva el registro desde su propia aplicación |
 | M7 · Pruebas finales con MySQL, guía de instalación y README | Pendiente |
 
 ## 6. Qué hay en el módulo (`packages/itca/horas-sociales/`)
@@ -108,7 +108,8 @@ MySQL: hay que probarlo con MySQL en M7.
 config/horas-sociales.php      Metas, % ambiental, máx. horas/día, plazo, columna del carnet, roles, plantilla
 routes/web.php                 Grupo /horas-sociales, nombres sse.*. Incluye registro.php y proyecto.php
 routes/proyecto.php            Rutas de M3 y M5 (proyecto, finalización y reglas)
-routes/registro.php            Rutas de M4 (aquí también irá la revisión del profesor, M6)
+routes/registro.php            Rutas de M4
+routes/revision.php            Rutas de M6 (vista del profesor, con can:sse-revisar)
 database/migrations/           6 archivos, 8 tablas con prefijo sse_ (la 6.ª es de M4: fotos)
 database/migrations-prueba/    Agrega carnet y rol a users (solo con SSE_LOGIN_PRUEBA=true)
 database/seeders/              DatosDePruebaSeeder, PeriodosNoHabilesSeeder
@@ -122,18 +123,23 @@ resources/views/
   registro.blade.php           Registro diario (M4)
   finalizacion.blade.php       Hoja de finalización (M5)
   reglas.blade.php             Reglas y calendario de días no hábiles (M5)
+  revision.blade.php           Bandeja del profesor y tabla de avance (M6)
+  revision-estudiante.blade.php Ficha completa de un estudiante (M6)
+  partials/resolver.blade.php  Comentario + Aprobar / No aprobar (M6); su JS en partials/resolver-script
   partials/aviso-fecha.blade.php     Aviso inmediato de fechas (R5), común a M3 y M4: sseAvisoFecha({...})
   partials/dias-no-habiles.blade.php "Ver días no hábiles" bajo cada campo de fecha
   ingreso.blade.php, sin-perfil.blade.php
 src/
   HorasSocialesServiceProvider.php
   Models/                      Estudiante, Proyecto, ProyectoObjetivo, ProyectoHorario, Registro, Evidencia, Finalizacion, PeriodoNoHabil
-  Http/Controllers/            IngresoPruebaController, PanelController, ProyectoController, RegistroController, FinalizacionController, ReglasController
-  Http/Requests/               ProyectoRequest, RegistroRequest, FinalizacionRequest
+  Http/Controllers/            IngresoPruebaController, PanelController, ProyectoController, RegistroController, FinalizacionController, ReglasController, RevisionController
+  Http/Middleware/SoloEstudiante.php  Alias sse.estudiante: manda al profesor a Revisión desde las pantallas GET del estudiante
+  Http/Requests/               ProyectoRequest, RegistroRequest, FinalizacionRequest, ResolucionRequest
   Rules/DiaHabil.php           R5: rechaza asuetos y vacaciones (reutilizable en M4)
   Support/                     CalendarioSalvadoreno, Resumen (cifras del panel), Fechas (hoy en El Salvador), HojaFila
 tests/Feature/RegistroDiarioTest.php   Pruebas de M4 (php artisan test)
 tests/Feature/FinalizacionTest.php     Pruebas de M5
+tests/Feature/RevisionTest.php         Pruebas de M6
   Console/                     Comando sse:periodos
 ```
 
@@ -209,17 +215,35 @@ Para que una pantalla nueva siga el diseño: el contenido va en
 - Para devolver la hoja en pruebas (mientras no exista M6):
   `php artisan tinker --execute="Itca\HorasSociales\Models\Finalizacion::query()->update(['estado' => 'rechazado']);"`
 
-## 8. Estado de Git (25 nov)
+## 7d. Cómo funciona M6 (Vista del profesor)
+
+**Alcance (26 nov):** esta vista es solo para nuestras pruebas. El profesor ya aprueba y lleva
+el registro de horas en su propia aplicación; lo que se fusiona con su proyecto son las pantallas
+del estudiante. Pendiente para M7: cómo se apaga esta vista al instalar el módulo y cómo llegan
+los datos del estudiante a la aplicación del profesor.
+
+- Rutas (`routes/revision.php`, todas con `can:sse-revisar`; un estudiante recibe 403):
+  `sse.revision` (GET, `?buscar=`), `sse.revision.estudiante` (GET, ficha, `?pestana=`),
+  `sse.revision.proyecto`, `sse.revision.registro`, `sse.revision.finalizacion` (POST con `decision=aprobar|rechazar` y `comentario`),
+  `sse.revision.registros` (POST con `ids[]`, aprobar varias).
+- Cada decisión guarda `estado`, `comentario_coordinador`, `resuelto_at` y `resuelto_por` y vuelve con `back()`.
+- Decisiones (26 nov): comentario obligatorio al no aprobar o devolver; la hoja de finalización no se aprueba
+  con horas pendientes ni si su fecha ya no es el último día con horas (R8); un registro ya resuelto se puede cambiar
+  mientras el registro diario no esté cerrado (R13), y al volver a aprobar uno no aprobado se revisa R2; aprobar en lote con casillas.
+- Solo se resuelve lo que espera (proyecto `enviado`, registro `pendiente`, hoja `enviada`); si no, "Esto ya fue revisado".
+- El profesor que abre Mi avance, Proyecto, Registro o Finalización va a Revisión (middleware `sse.estudiante`).
+  Las dos pruebas viejas que esperaban un aviso para el profesor ahora esperan esa redirección.
+
+## 8. Estado de Git (26 nov)
 
 - `main`: `d6f5f9c` "M4: registro diario", ya subido a GitHub (M3 y M4 completos).
-- M5 en la rama `m5-finalizacion`; se une a `main` después de probarlo.
-- Para M6: desde `main` actualizado, `git checkout -b m6-profesor`.
+- M5 ya está en `main` (`0746eea`). M6 se escribe en la rama `m6-profesor` (creada desde `main`).
 - Si `composer update` modifica `composer.lock` solo por el nombre de la rama,
   se descarta con `git restore composer.lock`.
-- `storage/app/claude-copia.tgz` (vacío) lo dejó Claude al copiar el proyecto; está fuera de Git y se puede borrar.
-- En `sse-host` hay dos carpetas sueltas fuera de Git: `Claude outputs/` (el zip de M4) y
-  `modulo-horas-sociales/` (copia vieja del módulo). No usar `git add .` mientras existan;
-  se pueden borrar.
+- Limpieza del 26 nov: ya no quedan archivos sueltos de Claude (se borró `storage/app/claude-copia.tgz`,
+  y las carpetas `Claude outputs/` y `modulo-horas-sociales/` ya no existían). También se quitó
+  `packages/itca/horas-sociales/pruebas/calendario.php`, un script de prueba de la primera versión
+  que corría sin Laravel; queda en el historial de Git.
 
 ## 9. Problemas conocidos y su solución
 
@@ -233,9 +257,9 @@ Para que una pantalla nueva siga el diseño: el contenido va en
 
 ## 10. Qué sigue
 
-**M6** Vista del profesor (`sse.revision`): aprobar o rechazar proyectos, horas
-y finalizaciones con comentario; tabla de avance por estudiante (R12). El profesor
-ya puede abrir las fotos con `sse.registro.foto`.
+**M6** Vista del profesor: probada (26 nov). Solo sirve para probar el recorrido aquí; en la app
+del profesor lo que se acopla son las pantallas del estudiante. Pendiente para M7: cómo la app del
+profesor lee y aprueba lo que guarda el módulo, y poder apagar la vista de revisión al instalar.
 **M7** Recorrido completo con MySQL, revisión en celular, guía de instalación
 para el profesor y README.
 
@@ -245,7 +269,7 @@ pre-coding), se confirman las decisiones y después se programa.
 ## 11. Mensaje para abrir el chat nuevo
 
 ```
-Vamos a continuar el proyecto de horas sociales con el M6 · Vista del profesor.
+Vamos a continuar el proyecto de horas sociales con el M7 · Pruebas finales y entrega.
 Lee primero el archivo de contexto: sse-host/docs/CONTEXTO-PARA-CLAUDE.md
 y el pre-coding: https://claude.ai/artifact/7b3B7f4BKwuwZg9887mLoP
 El proyecto está en C:\Users\eemma\Documents\Horas sociales proyecto\sse-host

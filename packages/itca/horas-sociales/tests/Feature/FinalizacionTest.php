@@ -235,9 +235,8 @@ class FinalizacionTest extends TestCase
     {
         $profesor = $this->crearUsuario('coordinador', 'profesor');
 
-        $this->actingAs($profesor)->get(route('sse.finalizacion'))
-            ->assertOk()
-            ->assertDontSee('Enviar hoja de finalización');
+        // M6: el profesor va a su pantalla de Revisión.
+        $this->actingAs($profesor)->get(route('sse.finalizacion'))->assertRedirect(route('sse.revision'));
 
         $this->actingAs($profesor)->post(route('sse.finalizacion.guardar'), ['accion' => 'enviar'])->assertForbidden();
         $this->assertDatabaseCount('sse_finalizaciones', 0);

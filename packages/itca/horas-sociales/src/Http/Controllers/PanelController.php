@@ -15,7 +15,7 @@ class PanelController extends Controller
     public function index(Request $request)
     {
         $esProfesor = Gate::allows('sse-revisar');
-        // El profesor no tiene perfil de estudiante. Su pantalla de revisión llega en el paso 7.
+        // El profesor no tiene perfil de estudiante (el middleware sse.estudiante ya lo manda a Revisión).
         $estudiante = $esProfesor ? null : Estudiante::delUsuario($request->user());
 
         if (! $estudiante) {
