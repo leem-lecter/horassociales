@@ -1,7 +1,7 @@
 # Contexto del proyecto: módulo de horas sociales ITCA-FEPADE
 
 Archivo de exportación para continuar el proyecto en otro chat de Claude.
-Actualizado: 26 de noviembre de 2026 (tras M6). Léelo completo antes de escribir código.
+Actualizado: 26 de noviembre de 2026 (tras M6, antes del ajuste visual). Léelo completo antes de escribir código.
 
 ---
 
@@ -99,8 +99,9 @@ MySQL: hay que probarlo con MySQL en M7.
 | M3 · Proyecto de trabajo (FBSSE-001) | Hecho, probado y subido (commit `6a64e30`) |
 | M4 · Registro diario (FBSSE-002) | Hecho, probado en el navegador y revisado una segunda vez (25 nov), con 40 pruebas automáticas. Subido a `main` (commit `d6f5f9c`) |
 | M5 · Finalización (FBSSE-003) y pantalla de Reglas | Hecho y probado en el navegador (25 nov), rama `m5-finalizacion`. 69 pruebas en total |
-| M6 · Vista del profesor | Escrito el 26 nov en la rama `m6-profesor`, con 18 pruebas nuevas (`RevisionTest`, 87 en total). Probado en el navegador por el usuario (26 nov). Es una pantalla **solo para pruebas**: el profesor aprueba y lleva el registro desde su propia aplicación |
-| M7 · Pruebas finales con MySQL, guía de instalación y README | Pendiente |
+| M6 · Vista del profesor | Hecho (26 nov): 87 pruebas pasan y probado en el navegador. Commit `05ee807` en la rama `m6-profesor`, subida a GitHub; **falta unirla a `main`**. Es una pantalla **solo para pruebas**: el profesor aprueba y lleva el registro desde su propia aplicación |
+| MV · Ajuste visual (extra, antes de M7) | **Siguiente.** Se hace en otro chat; ver sección 7e y el pre-coding |
+| M7 · Pruebas finales con MySQL, guía de instalación y README | Pendiente (después de MV) |
 
 ## 6. Qué hay en el módulo (`packages/itca/horas-sociales/`)
 
@@ -234,10 +235,41 @@ los datos del estudiante a la aplicación del profesor.
 - El profesor que abre Mi avance, Proyecto, Registro o Finalización va a Revisión (middleware `sse.estudiante`).
   Las dos pruebas viejas que esperaban un aviso para el profesor ahora esperan esa redirección.
 
+## 7e. Cómo está hecho el diseño visual hoy (para el ajuste visual)
+
+Datos del 26 nov, para que el chat del ajuste visual no tenga que descubrirlos.
+
+- **Un solo CSS:** `resources/views/partials/estilos.blade.php` (170 líneas, dentro de una etiqueta `<style>`).
+  Cada pantalla lo incluye con `@include('horas-sociales::partials.estilos')` al final.
+- **Variables en `:root`:** colores (`--papel`, `--hoja`, `--tinta`, `--gris`, `--linea`, `--azul`, `--azul-suave`,
+  `--sobre-azul`, `--ok`, `--aviso`, `--mal` y sus versiones `-suave`) y tipografías (`--display`, `--texto`, `--mono`).
+  Modo oscuro: definido dos veces (por `prefers-color-scheme` y por `data-theme="dark"`); nada en el módulo pone `data-theme`.
+- **Tipografías:** Archivo, IBM Plex Sans e IBM Plex Mono, cargadas desde Google Fonts en `layouts/modulo.blade.php`
+  (solo cuando se usa la plantilla propia del módulo).
+- **Idea de diseño actual:** "cuaderno de control": papel frío, tinta azul como único acento, cada pantalla rotulada con
+  el código de su formulario (`FBSSE-00X`) en la clase `.codigo`.
+- **Estructura:** `partials/marco.blade.php` (menú lateral + contenido, clases `.marco`, `.lateral`, `.nav`, `.principal`)
+  y, dentro, `.pila` con secciones `.hoja`. Piezas repetidas: `.cabecera`, `.bajada`, `.nota` (`.aviso`, `.mal`, `.ok`),
+  `.pastilla`, `.boton` (`.suave`, `.plano`, `.chico`), `.campo`, `.rejilla`, `.desliza` (tabla con scroll), `.cifras`,
+  `.barra`, `.pestanas`, `.dos` (formulario + tabla), `.resolver` y `.datos` (M6).
+- **Responsive:** un solo punto de corte, `max-width:860px` (menú arriba, `.dos` en una columna).
+- **Estilos en línea:** 78 atributos `style="..."` repartidos en las vistas (los más cargados: `revision-estudiante` 26,
+  `proyecto` 14, `revision` 12, `panel` 8, `registro` 8, `reglas` 5, `finalizacion` 2, `ingreso` 2, `resolver` 1).
+- **Scripts que dependen de clases, ids o `data-*`:** `partials/aviso-fecha`, `registro`, `proyecto`, `finalizacion`
+  y `partials/resolver-script`. Si se renombra una clase o un `data-*`, hay que cambiarlo también en su script.
+- **Pruebas que miran textos de la pantalla:** unas 45 aserciones `assertSee` / `assertDontSee` en `tests/Feature`.
+  Un cambio de texto visible puede romper una prueba: se actualiza en el mismo cambio.
+- **Riesgo para la fusión con la app del profesor:** `estilos.blade.php` define reglas globales (`html, body`, `h1, h2, h3`,
+  `a`, `input, select, textarea`, `table`, `p`) que, con la plantilla del profesor, afectarían a toda su página. Conviene
+  decidir en el ajuste visual si se aíslan bajo un contenedor propio del módulo.
+
 ## 8. Estado de Git (26 nov)
 
 - `main`: `d6f5f9c` "M4: registro diario", ya subido a GitHub (M3 y M4 completos).
-- M5 ya está en `main` (`0746eea`). M6 se escribe en la rama `m6-profesor` (creada desde `main`).
+- M5 ya está en `main` (`0746eea`). M6 está en la rama `m6-profesor` (commit `05ee807`, subida a GitHub), **todavía sin unir a `main`**.
+- Antes del ajuste visual, en Git Bash dentro de `sse-host`:
+  `git checkout main`, `git pull`, `git merge m6-profesor`, `php artisan test`, `git push`,
+  y después `git checkout -b ajuste-visual`.
 - Si `composer update` modifica `composer.lock` solo por el nombre de la rama,
   se descarta con `git restore composer.lock`.
 - Limpieza del 26 nov: ya no quedan archivos sueltos de Claude (se borró `storage/app/claude-copia.tgz`,
@@ -257,16 +289,35 @@ los datos del estudiante a la aplicación del profesor.
 
 ## 10. Qué sigue
 
-**M6** Vista del profesor: probada (26 nov). Solo sirve para probar el recorrido aquí; en la app
-del profesor lo que se acopla son las pantallas del estudiante. Pendiente para M7: cómo la app del
-profesor lee y aprueba lo que guarda el módulo, y poder apagar la vista de revisión al instalar.
-**M7** Recorrido completo con MySQL, revisión en celular, guía de instalación
-para el profesor y README.
+**MV · Ajuste visual (extra, antes de M7).** Se cambia el diseño visual de todo el módulo, en otro chat, en la rama
+`ajuste-visual`. Solo cambia la apariencia: no cambian reglas, rutas, nombres de campos ni lógica. Los cambios concretos los
+da el usuario en ese chat. Su pre-coding está en el documento de pre-coding ("Pre-coding del ajuste visual").
+**M7** Recorrido completo con MySQL, revisión en celular, guía de instalación para el profesor y README.
+Pendiente para M7: cómo la app del profesor lee y aprueba lo que guarda el módulo, y poder apagar la vista de revisión
+(M6) al instalar el módulo.
 
 Antes de cada módulo se hace su pre-coding (sección nueva en el documento de
 pre-coding), se confirman las decisiones y después se programa.
 
-## 11. Mensaje para abrir el chat nuevo
+## 11. Mensajes para abrir un chat nuevo
+
+**Ajuste visual (el siguiente):**
+
+```
+Vamos a hacer el ajuste visual de todo el proyecto de horas sociales (entre M6 y M7).
+Lee primero el archivo de contexto: sse-host/docs/CONTEXTO-PARA-CLAUDE.md (en especial las secciones 7e y 10)
+y el pre-coding, sección "Pre-coding del ajuste visual": https://claude.ai/artifact/7b3B7f4BKwuwZg9887mLoP
+El proyecto está en C:\Users\eemma\Documents\Horas sociales proyecto\sse-host
+
+Esto es solo apariencia: no se cambian reglas, rutas, nombres de campos ni lógica.
+No toques nada todavía. Cuando termines de leer, dime en pocas líneas qué entendiste y
+espera: voy a darte los cambios visuales que quiero. Con ellos, haz primero el pre-coding
+del ajuste (qué archivos cambian y en qué orden), anótalo en el documento de pre-coding,
+y pídeme confirmar las decisiones antes de programar. Trabaja en la rama ajuste-visual
+(sale de main con M6 ya unido) y corre php artisan test al terminar cada grupo de pantallas.
+```
+
+**M7 (después del ajuste visual):**
 
 ```
 Vamos a continuar el proyecto de horas sociales con el M7 · Pruebas finales y entrega.
@@ -274,5 +325,6 @@ Lee primero el archivo de contexto: sse-host/docs/CONTEXTO-PARA-CLAUDE.md
 y el pre-coding: https://claude.ai/artifact/7b3B7f4BKwuwZg9887mLoP
 El proyecto está en C:\Users\eemma\Documents\Horas sociales proyecto\sse-host
 ```
-Abrir ese chat en la aplicación de escritorio, en esta computadora, y conectar
+
+Abrir cada chat en la aplicación de escritorio, en esta computadora, y conectar
 la carpeta `sse-host`.
